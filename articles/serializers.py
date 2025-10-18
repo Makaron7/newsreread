@@ -1,6 +1,14 @@
 from rest_framework import serializers
 from .models import Article, Tag, Question, ActionItem
 
+class ArticleSimpleSerializer(serializers.ModelSerializer):
+    """
+    関連する記事の提案など、最小限の情報を返すためのSerializer
+    """
+    class Meta:
+        model = Article
+        fields = ['id', 'title', 'url', 'saved_at']
+
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
@@ -52,11 +60,13 @@ class ArticleSerializer(serializers.ModelSerializer):
             'priority', 
             'user_memo', 
             'user_summary', 
+            'image_url',
             'saved_at',
             'tags',    # ★追加
             'tag_ids', # ★追加
             'questions', # ★追加
             'actions',
+            'read_count',
         ]
 
 # ★追加：記事作成(POST)時に、ログインユーザーのタグだけを対象にする

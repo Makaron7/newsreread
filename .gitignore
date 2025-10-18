@@ -1,0 +1,30 @@
+# Python 仮想環境
+# Windows用とWSL(Linux)用の両方を除外します
+venv/
+venv_linux/
+
+# ローカルデータベース
+# 本番環境では別のDBを使うため、ローカルDBは除外します
+db.sqlite3
+db.sqlite3-journal
+
+# Python キャッシュファイル
+__pycache__/
+*.pyc
+*.pyo
+
+# Celery Beat (もし使った場合)
+celerybeat-schedule
+
+# OS固有ファイル
+# Mac
+.DS_Store
+# Windows
+Thumbs.db
+
+# ログファイル
+*.log
+
+# IDE/エディタ設定 (任意)
+.vscode/
+.idea/

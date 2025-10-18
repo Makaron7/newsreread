@@ -34,6 +34,15 @@ class Article(models.Model):
     ]
     tags = models.ManyToManyField(Tag, blank=True, related_name='articles')
     
+    # リマインド用 (機能3-2)
+    repetition_level = models.IntegerField(default=0) # 間隔反復のレベル
+    next_reminder_date = models.DateField(blank=True, null=True)
+
+    # 読んだ回数 (機能4-2)
+    read_count = models.IntegerField(default=0)
+    # メモ・要約 (機能5)
+    user_memo = models.TextField(blank=True, null=True)
+
     # 重要度の選択肢 (機能4-3)
     PRIORITY_CHOICES = [
         ('high', '高'),

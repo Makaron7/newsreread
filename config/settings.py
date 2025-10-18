@@ -144,3 +144,15 @@ REST_FRAMEWORK = {
         'django_filters.rest_framework.DjangoFilterBackend',
     ),
 }
+
+# ========== CELERY SETTINGS ==========
+# タスク（処理の依頼）を保存する場所 (ブローカー) としてRedisを指定
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+
+# タスクの結果を保存する場所 (バックエンド) としてRedisを指定
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Tokyo' # タイムゾーンを日本に設定
