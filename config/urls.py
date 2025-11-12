@@ -22,6 +22,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from articles.views import RegisterView, UserDetailView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,6 +31,8 @@ urlpatterns = [
     path('api/', include('articles.urls')),
     
     # 認証用のURLを追加
+    path('api/auth/register/', RegisterView.as_view(), name='register'), # ユーザー登録
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'), # トークン取得
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'), # トークン更新
+    path('api/auth/user/', UserDetailView.as_view(), name='user_detail'), # ログイン中のユーザー情報
 ]

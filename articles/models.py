@@ -1,10 +1,29 @@
 from django.db import models
-
-# Create your models here.
-from django.db import models
-from django.contrib.auth.models import User # Django標準のUserモデルを使います
+from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
 
 # ★ここから追加
+class CachedURL(models.Model):
+    """
+    スクレイピング結果をURL単位でキャッシュするモデル
+    """
+    url = models.URLField(max_length=2000, unique=True, db_index=True)
+    title = models.CharField(max_length=200, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    image_url = models.URLField(max_length=2000, blank=True, null=True)
+    last_scraped_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.url
+
+    def needs_rescrape(self, days=7):
+        """
+        最後にスクレイピングしてから指定日数経過したか
+        """
+        return timezone.now() - self.last_scraped_at > timedelta(days=days)
+# ★ここまで追加
+
 class Tag(models.Model):
     """
     記事に紐づけるタグ
@@ -18,11 +37,10 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
-# ★ここまで追加
 
 class Article(models.Model):
     """
-    保存する記事のモデル
+    保存する記事のモデル (ユーザー固有の情報のみ)
     """
     # ステータスの選択肢 (機能4)
     STATUS_CHOICES = [
@@ -32,17 +50,6 @@ class Article(models.Model):
         ('hof', '殿堂入り'), # Hall of Fame
         ('archived', 'アーカイブ'),
     ]
-    tags = models.ManyToManyField(Tag, blank=True, related_name='articles')
-    
-    # リマインド用 (機能3-2)
-    repetition_level = models.IntegerField(default=0) # 間隔反復のレベル
-    next_reminder_date = models.DateField(blank=True, null=True)
-
-    # 読んだ回数 (機能4-2)
-    read_count = models.IntegerField(default=0)
-    # メモ・要約 (機能5)
-    user_memo = models.TextField(blank=True, null=True)
-
     # 重要度の選択肢 (機能4-3)
     PRIORITY_CHOICES = [
         ('high', '高'),
@@ -55,14 +62,9 @@ class Article(models.Model):
     # 記事の所有者 (機能1)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='articles')
     
-    # URL (機能1)
-    url = models.URLField(max_length=2000)
-    
-    # (以下はスクレイピングで取得する情報)
-    title = models.CharField(max_length=200, blank=True, null=True)
-    description = models.TextField(blank=True, null=True)
-    image_url = models.URLField(max_length=2000, blank=True, null=True)
-    
+    # スクレイピング結果キャッシュとの関連
+    cached_url = models.ForeignKey(CachedURL, on_delete=models.CASCADE, related_name='articles')
+
     # 読了ステータス (機能4)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='unread')
     
@@ -72,6 +74,8 @@ class Article(models.Model):
     # 重要度 (機能4-3)
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
 
+    # 読んだ回数 (機能4-2)
+    read_count = models.IntegerField(default=0)
     # メモ・要約 (機能5)
     user_memo = models.TextField(blank=True, null=True)
     user_summary = models.TextField(blank=True, null=True)
@@ -81,10 +85,14 @@ class Article(models.Model):
     last_read_at = models.DateTimeField(blank=True, null=True) # 最終閲覧日時
 
     # リマインド用 (機能3-2)
+    repetition_level = models.IntegerField(default=0) # 間隔反復のレベル
     next_reminder_date = models.DateField(blank=True, null=True)
     
+    class Meta:
+        unique_together = ('user', 'cached_url')
+
     def __str__(self):
-        return self.title or self.url
+        return self.cached_url.title or self.cached_url.url
     
 # ★ここから追加
 class Question(models.Model):

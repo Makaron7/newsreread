@@ -1,4 +1,3 @@
-
 # Standard Library
 from datetime import timedelta
 
@@ -8,21 +7,47 @@ from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
 # Third-Party Libraries (DRF, Django-Filter)
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, generics # ★ generics を追加
+from django.contrib.auth.models import User # ★ User を追加
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 
 # Local Application Imports
-from .models import Article, Tag, Question, ActionItem
+from .models import Article, Tag, Question, ActionItem, CachedURL
 from .serializers import (
+    RegisterSerializer, # ★インポート追加
+    UserSerializer, # ★ユーザー情報用シリアライザをインポート
     ArticleSerializer, 
     ArticleSimpleSerializer,
     TagSerializer, 
     QuestionSerializer, 
     ActionItemSerializer
 )
+# ★ここから追加
+class RegisterView(generics.CreateAPIView):
+    """
+    ユーザー登録APIビュー (POST /api/auth/register/)
+    """
+    queryset = User.objects.all()
+    serializer_class = RegisterSerializer
+    # ★重要：このAPIは「認証なし」でアクセスできるようにする
+    permission_classes = [permissions.AllowAny] 
+# ★ここまで追加
+
+# ★ここから追加
+class UserDetailView(generics.RetrieveAPIView):
+    """
+    認証トークンに基づき、ログイン中のユーザー情報を返す
+    (GET /api/auth/user/)
+    """
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+# ★ここまで追加
 from .filters import ArticleFilter
 from .tasks import fetch_article_metadata
 
@@ -135,54 +160,41 @@ class ArticleViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return self.request.user.articles.all().order_by('-saved_at')
 
-    # perform_create はもう使わないので削除
-
-    # ★ここから追加 (perform_create の代わり)
     def create(self, request, *args, **kwargs):
         """
-        新しい記事を作成(POST)する処理をオーバーライド
+        記事の保存(POST)処理
+        重複チェック と TypeError回避 を両方行う
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        url_input = serializer.validated_data.get('url_input')
+        user = self.request.user
+        cached_url_instance, created_cache = CachedURL.objects.get_or_create(url=url_input)
+        try:
+            existing_article = Article.objects.get(
+                user=user,
+                cached_url=cached_url_instance
+            )
+            print(f"Article already exists (ID: {existing_article.id}). Returning existing.")
+            existing_serializer = self.get_serializer(existing_article)
+            return Response(existing_serializer.data, status=status.HTTP_200_OK)
+        except Article.DoesNotExist:
+            tags_data = serializer.validated_data.pop('tags', [])
+            serializer.validated_data.pop('url_input', None)
+            article_instance = Article.objects.create(
+                user=user,
+                cached_url=cached_url_instance,
+                **serializer.validated_data
+            )
+            if tags_data:
+                article_instance.tags.set(tags_data)
+            SCRAPE_RENEWAL_DAYS = 7
+            if created_cache or cached_url_instance.needs_rescrape(days=SCRAPE_RENEWAL_DAYS):
+                fetch_article_metadata.delay(cached_url_instance.id)
+            new_serializer = self.get_serializer(article_instance)
+            headers = self.get_success_headers(new_serializer.data)
+            return Response(new_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-        # 1. 記事を保存 (ログインユーザーを紐付け)
-        article_instance = serializer.save(user=request.user)
-
-        # 2. Celery タスクを呼び出し (非同期スクレイピング)
-        fetch_article_metadata.delay(article_instance.id)
-
-        # 3. レスポンスデータを準備 (保存した記事本体)
-        #    (context={'request': request} を渡して tag_ids が機能するようにする)
-        response_serializer = ArticleSerializer(
-            article_instance,
-            context={'request': request}
-        )
-        response_data = response_serializer.data
-
-        # --- 機能3-3: 関連する記事の提案 ---
-        related_articles = []
-        # 保存した記事に紐づくタグIDリストを取得
-        tag_ids = [tag.id for tag in article_instance.tags.all()]
-
-        if tag_ids:
-            # 同じタグを持ち、自分自身(article_instance)を除外し、
-            # ログインユーザーの記事で、最大5件まで
-            related_articles_query = Article.objects.filter(
-                user=request.user,
-                tags__id__in=tag_ids
-            ).exclude(
-                id=article_instance.id
-            ).distinct().order_by('-saved_at')[:5]
-            # 軽量なSerializerでシリアライズ
-            related_articles = ArticleSimpleSerializer(related_articles_query, many=True).data
-
-        # 4. レスポンスに「関連する記事」を追加して返す
-        response_data['related_articles_suggestion'] = related_articles
-
-        headers = self.get_success_headers(serializer.data)
-        return Response(response_data, status=status.HTTP_201_CREATED, headers=headers)
-    # ★ここまで追加
-        
     @action(detail=True, methods=['post'])
     def mark_as_read(self, request, pk=None):
         """

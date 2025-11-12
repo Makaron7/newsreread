@@ -1,5 +1,58 @@
 from rest_framework import serializers
-from .models import Article, Tag, Question, ActionItem
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from .models import Article, Tag, Question, ActionItem, CachedURL
+
+# ★ここから追加
+class RegisterSerializer(serializers.ModelSerializer):
+    """
+    ユーザー登録用のシリアライザー
+    """
+    # パスワード（書き込み専用）
+    password = serializers.CharField(
+        write_only=True, 
+        required=True, 
+        validators=[validate_password] # Django標準のパスワード検証
+    )
+    # パスワード確認用（書き込み専用）
+    password2 = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = User
+        fields = ('username', 'password', 'password2', 'email')
+        extra_kwargs = {
+            'email': {'required': True} # emailを必須に
+        }
+
+    def validate(self, attrs):
+        """
+        パスワードとパスワード確認が一致するか検証
+        """
+        if attrs['password'] != attrs['password2']:
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
+        return attrs
+
+    def create(self, validated_data):
+        """
+        検証済みデータからユーザーを作成
+        """
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=validated_data['password']
+        )
+        return user
+# ★ここまで追加
+
+# ★ここから追加
+class UserSerializer(serializers.ModelSerializer):
+    """
+    ログイン中のユーザー情報を返すためのシリアライザー
+    """
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email')
+# ★ここまで追加
 
 class ArticleSimpleSerializer(serializers.ModelSerializer):
     """
@@ -30,54 +83,56 @@ class ActionItemSerializer(serializers.ModelSerializer):
 # ★ここまで追加
 
 class ArticleSerializer(serializers.ModelSerializer):
-
-    # ★追加：タグ情報をIDだけでなく名前なども含めて表示するようにする
     tags = TagSerializer(many=True, read_only=True)
-    
-    # ★追加：記事作成・更新時にタグIDのリストを受け取れるようにする
-    # (例: "tag_ids": [1, 5, 10])
     tag_ids = serializers.PrimaryKeyRelatedField(
         many=True,
-        queryset=Tag.objects.all(), # (後でユーザー自身のタグのみに絞り込みます)
+        queryset=Tag.objects.all(),
         write_only=True,
-        source='tags' # 'tags' フィールドとして処理する
+        source='tags'
     )
     questions = QuestionSerializer(many=True, read_only=True)
     actions = ActionItemSerializer(many=True, read_only=True)
 
+    # ★追加：CachedURL から情報を取得して表示 (読み取り専用)
+    url = serializers.URLField(source='cached_url.url', read_only=True)
+    title = serializers.CharField(source='cached_url.title', read_only=True)
+    description = serializers.CharField(source='cached_url.description', read_only=True)
+    image_url = serializers.URLField(source='cached_url.image_url', read_only=True)
+
+    # ★追加：記事保存時に URL を受け取るためのフィールド (書き込み専用)
+    url_input = serializers.URLField(write_only=True, required=True)
 
     class Meta:
         model = Article
-        # APIを通じて外部に公開する項目を指定します
-        # (userはセキュリティのため一旦除外)
         fields = [
             'id', 
+            # ★ cached_url から取得するフィールド
             'url', 
             'title', 
             'description', 
+            'image_url', 
+            'url_input', # ★ 書き込み用
+            # ★ Articleモデル固有のフィールド
             'status', 
             'is_favorite', 
             'priority', 
+            'read_count', 
             'user_memo', 
             'user_summary', 
-            'image_url',
             'saved_at',
-            'tags',    # ★追加
-            'tag_ids', # ★追加
-            'questions', # ★追加
-            'actions',
-            'read_count',
+            'last_read_at',
+            'repetition_level',
+            'next_reminder_date',
+            'tags',    
+            'tag_ids', 
+            'questions', 
+            'actions',   
         ]
 
-# ★追加：記事作成(POST)時に、ログインユーザーのタグだけを対象にする
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        # リクエスト情報(ユーザー)を取得
         request = self.context.get('request', None)
         if request and hasattr(request, "user"):
             user = request.user
-            # tag_ids の選択肢を、ログインユーザーが所有するタグのみに限定する
             self.fields['tag_ids'].queryset = Tag.objects.filter(user=user)
 
-    

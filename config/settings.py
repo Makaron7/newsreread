@@ -25,12 +25,17 @@ SECRET_KEY = 'django-insecure-s=y^@r++pvn)ad((gv04j-c+3+o8j^!2up67ca^5ht+iu6zio!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '10.0.2.2',      # ★ Androidエミュレータからのアクセスを許可
+    '127.0.0.1',   # 既存のlocalhost
+    'localhost',     #
+]
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    'corsheaders',  # ★この行を一番上に追加
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -49,6 +54,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # ★この行を追加
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -156,3 +162,25 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Tokyo' # タイムゾーンを日本に設定
+
+# ========== CORS SETTINGS ==========
+
+# True にすると、すべてのドメインからのアクセスを許可 (開発中は便利)
+CORS_ALLOW_ALL_ORIGINS = True
+
+# (もし本番環境などでドメインを制限したい場合は、以下のように設定します)
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",      # 開発中のReactアプリなど
+#     "http://127.0.0.1:3000",      #
+#     "https://your-app-domain.com", # 本番のドメイン
+# ]
+
+# 許可するHTTPヘッダー (Authorization ヘッダーを許可)
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'authorization', # ★JWT認証のために必須
+    'content-type',
+    'origin',
+    'x-csrftoken',
+    'x-requested-with',
+]
