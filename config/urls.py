@@ -41,8 +41,6 @@ urlpatterns = [
     # ログイン・ログアウト用URL
     path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'), # 1. ログイン画面のURLを 'accounts/login/' に変更します
 
-    path('articles/new/', article_views.article_create, name='article_create'), # 記事追加ページへのURL
-
     # トップページ ('') にアクセスしたら、記事一覧 (article_list) を表示するようにします
     # （ログインしていない場合は、上の accounts/login/ に自動で飛ばされるようになります）
     path('', article_views.article_list, name='home'),
