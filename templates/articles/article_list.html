@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>積読リスト</title>
+    <style>
+        body { font-family: sans-serif; padding: 10px; background-color: #f4f4f4; }
+        .card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .title { font-size: 1.2em; font-weight: bold; color: #333; }
+        .status { color: #666; font-size: 0.9em; }
+        .btn-add { display: block; width: 100%; padding: 15px; background: #28a745; color: white; text-align: center; text-decoration: none; border-radius: 5px; margin-bottom: 20px; font-weight: bold;}
+    </style>
+</head>
+<body>
+    <a href="{% url 'article_create' %}" class="btn-add">＋ 新しい記事を追加</a>
+
+    <h3>あなたの積読リスト</h3>
+
+    {% for article in articles %}
+        <div class="card">
+            <div class="title">{{ article.cached_url.title|default:article.cached_url.url }}</div>
+            <div class="status">作成日: {{ article.created_at|date:"Y/m/d" }}</div>
+        </div>
+    {% empty %}
+        <p>まだ記事がありません。</p>
+    {% endfor %}
+    
+    <br>
+    <form action="{% url 'logout' %}" method="post">
+        {% csrf_token %}
+        <button type="submit">ログアウト</button>
+    </form>
+</body>
+</html>

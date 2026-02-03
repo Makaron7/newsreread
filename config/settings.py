@@ -187,5 +187,7 @@ CORS_ALLOW_HEADERS = [
 
 
 # ========== LOGIN SETTINGS ==========
+LOGIN_URL = '/accounts/login/' # ログイン画面の場所（ここを変更！）
+
 LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'

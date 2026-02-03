@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views # ★追加：ログイン機能を使うため
+from articles import views as article_views # ★追加：先ほど作ったビューを読み込む
 
 # simplejwt用のviewをインポート
 from rest_framework_simplejwt.views import (
@@ -37,6 +38,15 @@ urlpatterns = [
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'), # トークン更新
     path('api/auth/user/', UserDetailView.as_view(), name='user_detail'), # ログイン中のユーザー情報
 
-    path('', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),# ★追加：トップページ（''）にアクセスしたらログイン画面を表示する
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),# ★追加：ログアウト用（必要であれば）
+    # ログイン・ログアウト用URL
+    path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'), # 1. ログイン画面のURLを 'accounts/login/' に変更します
+
+    path('articles/new/', article_views.article_create, name='article_create'), # 記事追加ページへのURL
+
+    # トップページ ('') にアクセスしたら、記事一覧 (article_list) を表示するようにします
+    # （ログインしていない場合は、上の accounts/login/ に自動で飛ばされるようになります）
+    path('', article_views.article_list, name='home'),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'), # ★追加：ログアウト用（必要であれば）
+
+
 ]

@@ -2,9 +2,14 @@
 from datetime import timedelta
 
 # Django Core
+from django.shortcuts import render, redirect # ★追加：HTMLを表示するために必要
+from django.contrib.auth.decorators import login_required # ★追加：ログイン必須にするために必要
 from django.db.models import F, Count
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
+
+# Local Application Imports
+from .forms import ArticleCreateForm # ★追加：記事追加フォームをインポート
 
 # Third-Party Libraries (DRF, Django-Filter)
 from rest_framework import viewsets, permissions, status, generics # ★ generics を追加
@@ -272,3 +277,18 @@ class ArticleViewSet(viewsets.ModelViewSet):
         else:
             # 記事が1件も保存されていない場合
             return Response(status=status.HTTP_404_NOT_FOUND)
+        
+# ★ここから追加：スマホアプリ（WebView）で表示するためのHTML画面用ビュー
+@login_required
+def article_list(request):
+    """
+    記事一覧画面を表示する (HTMLを返す)
+    """
+    # ログインユーザーの記事を、保存日が新しい順に取得
+    articles = Article.objects.filter(user=request.user).order_by('-saved_at')
+    
+    context = {
+        'articles': articles
+    }
+    # 以前作成した templates/articles/article_list.html を表示する
+    return render(request, 'articles/article_list.html', context)
