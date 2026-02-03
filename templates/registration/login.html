@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログイン</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h2>ログイン</h2>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div>
+            <label>ユーザー名:</label>
+            {{ form.username }}
+        </div>
+        <div>
+            <label>パスワード:</label>
+            {{ form.password }}
+        </div>
+        <button type="submit">ログインする</button>
+    </form>
+</body>
+</html>
