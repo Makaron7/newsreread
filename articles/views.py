@@ -2,7 +2,8 @@
 from datetime import timedelta
 
 # Django Core
-from django.shortcuts import render, redirect # ★追加：HTMLを表示するために必要
+from django.shortcuts import render, redirect, get_object_or_404 # ★追加：HTMLを表示するために必要
+from .forms import ArticleEditForm # ★追加：編集用フォームをインポート
 from django.contrib.auth.decorators import login_required # ★追加：ログイン必須にするために必要
 from django.db.models import F, Count
 from django.db.models.functions import TruncMonth
@@ -289,3 +290,27 @@ def article_list(request):
     }
     # 以前作成した templates/articles/article_list.html を表示する
     return render(request, 'articles/article_list.html', context)
+
+# ファイルの一番下： 編集用ビュー
+@login_required
+def article_update(request, pk):
+    """
+    記事の情報を編集・更新する
+    """
+    # 編集対象の記事を取得
+    article = get_object_or_404(Article, pk=pk, user=request.user)
+
+    if request.method == 'POST':
+        # 保存時：user情報を渡してフォームを作成
+        form = ArticleEditForm(request.POST, instance=article, user=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect('home')
+    else:
+        # 表示時：user情報を渡してフォームを作成
+        form = ArticleEditForm(instance=article, user=request.user)
+
+    return render(request, 'articles/article_edit.html', {
+        'form': form,
+        'article': article
+    })

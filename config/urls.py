@@ -44,6 +44,9 @@ urlpatterns = [
     # トップページ ('') にアクセスしたら、記事一覧 (article_list) を表示するようにします
     # （ログインしていない場合は、上の accounts/login/ に自動で飛ばされるようになります）
     path('', article_views.article_list, name='home'),
+
+path('articles/<int:pk>/edit/', article_views.article_update, name='article_update'), # ★追加：編集画面へのパス (<int:pk> は "記事IDの数字" という意味)
+
     path('logout/', auth_views.LogoutView.as_view(), name='logout'), # ★追加：ログアウト用（必要であれば）
 
 

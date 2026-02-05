@@ -62,6 +62,9 @@ class Article(models.Model):
     # 記事の所有者 (機能1)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='articles')
     
+    # ★追加：タグとの関連付け（これがないとエラーになります）
+    tags = models.ManyToManyField(Tag, blank=True)
+
     # スクレイピング結果キャッシュとの関連
     cached_url = models.ForeignKey(CachedURL, on_delete=models.CASCADE, related_name='articles')
 
@@ -82,11 +85,11 @@ class Article(models.Model):
     
     # 日時
     saved_at = models.DateTimeField(auto_now_add=True) # 保存日時
-    last_read_at = models.DateTimeField(blank=True, null=True) # 最終閲覧日時
+    last_read_at = models.DateField(blank=True, null=True) # 最終閲覧日時
 
     # リマインド用 (機能3-2)
     repetition_level = models.IntegerField(default=0) # 間隔反復のレベル
-    next_reminder_date = models.DateField(blank=True, null=True)
+    next_reminder_date = models.DateTimeField(blank=True, null=True)
     
     class Meta:
         unique_together = ('user', 'cached_url')
