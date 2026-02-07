@@ -25,7 +25,7 @@ class ArticleEditForm(forms.ModelForm):
             'read_count': '読んだ回数',
             'last_read_at': '前回読んだ日付',
             'repetition_level': '反復レベル (0~)',
-            'next_reminder_date': '次回リマインド日',
+            'next_reminder_date': '次回リマインド日時',
             'tags': 'タグ設定',
         }
         
@@ -37,9 +37,9 @@ class ArticleEditForm(forms.ModelForm):
             'priority': forms.Select(attrs={'class': 'form-select'}),
             'read_count': forms.NumberInput(attrs={'class': 'form-control'}),
             # 日付入力にはHTMLの type="datetime-local" や "date" を使います
-            'last_read_at': forms.DateInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'last_read_at': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'repetition_level': forms.NumberInput(attrs={'class': 'form-control'}),
-            'next_reminder_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'next_reminder_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             # タグは複数選択できるようにします
             'tags': forms.SelectMultiple(attrs={'class': 'form-select', 'style': 'height: 100px;'}),
         }

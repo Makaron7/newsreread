@@ -3,142 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>積読リスト</title>
+    <title>Newsreread</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     
     <style>
         body {
-            background-color: #f0f2f5; /* 背景色: Keepっぽい薄いグレー */
-            padding-bottom: 80px; /* FABとかぶらないように余白 */
+            background-color: #fff; /* Keepっぽい白背景 */
+            padding-bottom: 80px;
         }
 
-        /* ヘッダー部分 */
+        /* ヘッダー */
         .app-bar {
             background-color: #fff;
-            padding: 15px 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            padding: 10px 15px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* 控えめな影 */
             position: sticky;
             top: 0;
             z-index: 100;
             display: flex;
+            align-items: center;
+            height: 64px;
+        }
+        
+        /* ハンバーガーボタン */
+        .btn-menu {
+            border: none;
+            background: none;
+            margin-right: 15px;
+            padding: 8px;
+            border-radius: 50%;
+            color: #5f6368;
+            cursor: pointer;
+            display: flex; /* アイコンを中心に */
+        }
+        .btn-menu:active { background-color: #f1f3f4; }
+
+        .app-title {
+            font-size: 22px;
+            color: #008b8b; /* ★変更1：メイン画面のタイトル色をダークシアン(#008b8b)に変更 */
+            font-family: 'Product Sans', sans-serif; /* Googleっぽいフォント指定（あれば） */
+            font-weight: bold; /* ★追加：色を変えたので少し太くして視認性をアップ */
+        }
+
+        /* サイドバー（ドロワー）のデザイン */
+        .offcanvas {
+            width: 250px; /* ★変更2：幅を250pxから230pxにさらに狭め、＋ボタンとの距離を確保 */
+            border-right: none;
+        }
+        .sidebar-header {
+            padding: 15px;
+            font-size: 22px;
+            color: #008b8b; /* ★変更1：サイドバー内のタイトル色もダークシアンに統一 */
+            display: flex;
+            align-items: center;
+            text-shadow: 0px 1px 2px rgba(0,0,0,0.1); /* ★追加：明るい色なので影をつけて見やすく */
+        }
+        
+        /* サイドバーのメニュー項目 */
+        .nav-link {
+            color: #202124;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 500;
+            border-radius: 0 25px 25px 0; /* ★Keep流：右側だけ丸くする */
+            margin-right: 10px; /* 右端に少し隙間 */
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+        .nav-link:hover {
+            background-color: #f1f3f4;
+            color: #202124;
+        }
+        .nav-link.active {
+            background-color: #e0f2f1; /* ★変更：選択色はダークシアンに合わせて薄いミントグリーン系に調整 */
+            color: #008b8b; /* ★変更：選択中の文字色もダークシアンに */
+        }
+        .nav-link .material-icons {
+            margin-right: 18px;
+            color: #5f6368;
+            font-size: 24px;
+        }
+        
+        /* ラベル（タグ）セクションのタイトル */
+        .nav-section-label {
+            padding: 15px 24px 5px 24px;
+            font-size: 12px;
+            color: #5f6368;
+            font-weight: bold;
+            display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .app-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #5f6368;
-        }
 
-        /* Masonryレイアウト（レンガ積み）の設定 */
+        /* Masonryレイアウト */
         .masonry-container {
-            column-count: 2; /* スマホなら2列 */
-            column-gap: 10px; /* 列の隙間 */
+            column-count: 2;
+            column-gap: 10px;
             padding: 10px;
+            margin-top: 10px;
         }
 
-        /* カードのデザイン */
+        /* カードデザイン */
         .note-card {
             background-color: #fff;
             border-radius: 8px;
             border: 1px solid #e0e0e0;
             margin-bottom: 10px;
-            break-inside: avoid; /* 列の途中でカードが切れないようにする */
-            transition: box-shadow 0.2s;
-            overflow: hidden;
+            break-inside: avoid;
             position: relative;
+            transition: box-shadow 0.2s;
         }
-        /* カードをタップした時のアニメーション（PC用） */
         .note-card:hover {
             box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
         }
-
-        .card-body {
-            padding: 12px;
-        }
-
+        .card-body { padding: 12px; }
         .card-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #202124;
-            line-height: 1.4;
+            font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #202124; line-height: 1.4;
         }
-
-        .card-text {
-            font-size: 13px;
-            color: #5f6368;
-            margin-bottom: 0;
-            word-break: break-all; /* 長いURLも折り返す */
-        }
-        
+        .card-text { font-size: 13px; color: #5f6368; margin-bottom: 0; word-break: break-all; }
         .card-meta {
-            font-size: 11px;
-            color: #9aa0a6;
-            margin-top: 8px;
-            display: flex;
-            justify-content: space-between;
+            font-size: 11px; color: #9aa0a6; margin-top: 8px; display: flex; align-items: center; justify-content: space-between;
         }
 
-        /* 記事がないときのメッセージ */
-        .empty-state {
-            text-align: center;
-            margin-top: 100px;
-            color: #5f6368;
-        }
+        /* 空の状態 */
+        .empty-state { text-align: center; margin-top: 100px; color: #5f6368; }
 
-        /* 右下のフローティングアクションボタン (FAB) */
+        /* FAB */
         .fab-add {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 56px;
-            height: 56px;
-            background-color: #fff; /* Google Keepっぽい白ベース */
-            border-radius: 50%;
+            position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px;
+            background-color: #fff; border-radius: 50%;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            transition: transform 0.2s;
-            z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none; z-index: 2000;
         }
-        .fab-add:active {
-            background-color: #f1f3f4;
-            transform: scale(0.95);
-        }
-        /* プラスアイコンの色 */
         .material-icons.plus-icon {
             font-size: 36px;
             background: -webkit-linear-gradient(45deg, #ea4335, #fbbc04, #34a853, #4285f4);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
-        /* 単色のプラスアイコンがいい場合はこちらを使う */
-        /* .material-icons.plus-icon { color: #5f6368; } */
-
-        /* ログアウトボタン（アイコン） */
-        .btn-logout {
-            background: none;
-            border: none;
-            color: #5f6368;
-            cursor: pointer;
-        }
-
     </style>
 </head>
 <body>
 
     <div class="app-bar">
-        <div class="app-title">積読リスト</div>
-        <form action="{% url 'logout' %}" method="post" style="margin:0;">
-            {% csrf_token %}
-            <button type="submit" class="btn-logout" title="ログアウト">
-                <span class="material-icons">logout</span>
-            </button>
-        </form>
+        <button class="btn-menu" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
+            <span class="material-icons">menu</span>
+        </button>
+        <div class="app-title">
+            {% if request.GET.tag %}
+                ラベル
+            {% else %}
+                Newsreread
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu">
+        <div class="sidebar-header">
+            <span style="color: #008b8b; font-weight: bold;">Newsreread</span>
+        </div>
+        <div class="offcanvas-body p-0">
+            <nav class="nav flex-column">
+                <a class="nav-link {% if not request.GET.tag %}active{% endif %}" href="{% url 'home' %}">
+                    <span class="material-icons">lightbulb</span>
+                    メモ
+                </a>
+                
+                <a class="nav-link" href="#">
+                    <span class="material-icons">notifications</span>
+                    リマインダー
+                </a>
+
+                <div class="nav-section-label">
+                    <span>ラベル</span>
+                    <span style="font-size: 10px; cursor: pointer;">編集</span>
+                </div>
+
+                {% for tag in tags %}
+                <a class="nav-link {% if request.GET.tag == tag.id|stringformat:'s' %}active{% endif %}" 
+                   href="{% url 'home' %}?tag={{ tag.id }}">
+                    <span class="material-icons">label</span>
+                    {{ tag.name }}
+                </a>
+                {% endfor %}
+
+                <div class="mt-2 border-top pt-2">
+                    <a class="nav-link" href="#">
+                        <span class="material-icons">archive</span>
+                        アーカイブ
+                    </a>
+                    <a class="nav-link" href="#">
+                        <span class="material-icons">delete</span>
+                        ゴミ箱
+                    </a>
+                </div>
+                
+                <div class="mt-2 border-top pt-2">
+                    <form action="{% url 'logout' %}" method="post" style="margin:0; padding:0;">
+                        {% csrf_token %}
+                        <button type="submit" class="nav-link" style="width: 100%; border: none; background: none; text-align: left;">
+                             <span class="material-icons">logout</span>
+                             ログアウト
+                        </button>
+                    </form>
+                </div>
+
+            </nav>
+        </div>
     </div>
 
     {% if articles %}
@@ -151,17 +224,25 @@
                                 {{ article.cached_url.title|default:article.cached_url.url|truncatechars:40 }}
                             </a>
                         </div>
-                        
                         <div class="card-text">
                             {{ article.cached_url.url|truncatechars:30 }}
                         </div>
+                        
+                        {% if article.tags.all %}
+                        <div style="margin-top: 8px;">
+                            {% for tag in article.tags.all %}
+                                <span style="font-size: 11px; background: #f1f3f4; padding: 2px 6px; border-radius: 4px; color: #3c4043; margin-right: 4px;">
+                                    {{ tag.name }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
 
-                        <div class="card-meta" style="align-items: center;">
+                        <div class="card-meta">
                             <span>{{ article.saved_at|date:"n/j" }}</span>
-    
                             <a href="{% url 'article_update' article.id %}" style="color: #5f6368; text-decoration: none; padding: 5px;">
                                 <span class="material-icons" style="font-size: 18px;">edit</span>
-                             </a>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -169,8 +250,9 @@
         </div>
     {% else %}
         <div class="empty-state">
-            <span class="material-icons" style="font-size: 64px; opacity: 0.2;">library_books</span>
-            <p>まだ記事がありません。<br>右下のボタンから追加しましょう！</p>
+            <span class="material-icons" style="font-size: 64px; opacity: 0.2;">label_off</span>
+            <p>記事が見つかりません</p>
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm">すべてのメモを表示</a>
         </div>
     {% endif %}
 

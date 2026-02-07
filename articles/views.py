@@ -282,9 +282,17 @@ def article_list(request):
     """
     記事一覧画面を表示する (HTMLを返す)
     """
-    # ログインユーザーの記事を、保存日が新しい順に取得
+    # 1. ログインユーザーの全記事を、保存日が新しい順に取得
     articles = Article.objects.filter(user=request.user).order_by('-saved_at')
     
+    # 2. URLに ?tag=1 のような指定があれば絞り込む
+    tag_id = request.GET.get('tag')
+    if tag_id:
+        articles = articles.filter(tags__id=tag_id)
+
+    # 3. サイドバーに表示するために、自分のタグ一覧を取得
+    tags = Tag.objects.filter(user=request.user)
+
     context = {
         'articles': articles
     }
