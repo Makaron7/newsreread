@@ -9,15 +9,16 @@
     
     <style>
         body {
-            background-color: #fff; /* Keepっぽい白背景 */
+            background-color: #fff;
             padding-bottom: 80px;
+            font-family: 'Roboto', sans-serif;
         }
 
         /* ヘッダー */
         .app-bar {
             background-color: #fff;
             padding: 10px 15px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* 控えめな影 */
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             position: sticky;
             top: 0;
             z-index: 100;
@@ -26,7 +27,6 @@
             height: 64px;
         }
         
-        /* ハンバーガーボタン */
         .btn-menu {
             border: none;
             background: none;
@@ -35,40 +35,44 @@
             border-radius: 50%;
             color: #5f6368;
             cursor: pointer;
-            display: flex; /* アイコンを中心に */
+            display: flex;
         }
         .btn-menu:active { background-color: #f1f3f4; }
 
         .app-title {
             font-size: 22px;
-            color: #008b8b; /* ★変更1：メイン画面のタイトル色をダークシアン(#008b8b)に変更 */
-            font-family: 'Product Sans', sans-serif; /* Googleっぽいフォント指定（あれば） */
-            font-weight: bold; /* ★追加：色を変えたので少し太くして視認性をアップ */
+            color: #008b8b;
+            font-family: 'Product Sans', sans-serif;
+            font-weight: bold;
         }
 
-        /* サイドバー（ドロワー）のデザイン */
+        /* ▼▼▼ サイドバーの設定 ▼▼▼ */
         .offcanvas {
-            width: 200px; /* ★変更：幅を200pxまで狭めて、＋ボタンとの距離を確実に確保 */
+            /* ★変更：幅を320pxに設定（Google Keepや一般的なAndroidアプリの標準サイズ） */
+            /* これにより、かなり右側まで広がり「データ」部分までカバーされます */
+            width: 320px !important; 
+            max-width: 90%; /* 画面が狭いスマホでも9割で止まるように */
             border-right: none;
+            z-index: 1045; /* バックドロップ(1040)より上 */
         }
+
         .sidebar-header {
             padding: 15px;
-            font-size: 20px; /* ★変更：幅に合わせて文字サイズを少し小さく */
-            color: #008b8b; /* ★変更1：サイドバー内のタイトル色もダークシアンに統一 */
+            font-size: 22px; /* 幅が広がったので文字サイズも戻しました */
+            color: #008b8b;
             display: flex;
             align-items: center;
-            text-shadow: 0px 1px 2px rgba(0,0,0,0.1); /* ★追加：明るい色なので影をつけて見やすく */
+            text-shadow: 0px 1px 2px rgba(0,0,0,0.1);
             font-weight: bold;
         }
         
-        /* サイドバーのメニュー項目 */
         .nav-link {
             color: #202124;
-            padding: 10px 15px; /* ★変更：幅に合わせて余白を少し調整 */
-            font-size: 14px;    /* ★変更：幅に合わせて文字サイズを少し調整 */
+            padding: 12px 24px; /* 幅が広がったので余白も少しゆったりに戻しました */
+            font-size: 15px;
             font-weight: 500;
-            border-radius: 0 25px 25px 0; /* ★Keep流：右側だけ丸くする */
-            margin-right: 10px; /* 右端に少し隙間 */
+            border-radius: 0 25px 25px 0;
+            margin-right: 10px;
             display: flex;
             align-items: center;
             text-decoration: none;
@@ -78,18 +82,17 @@
             color: #202124;
         }
         .nav-link.active {
-            background-color: #e0f2f1; /* ★変更：選択色はダークシアンに合わせて薄いミントグリーン系に調整 */
-            color: #008b8b; /* ★変更：選択中の文字色もダークシアンに */
+            background-color: #e0f2f1;
+            color: #008b8b;
         }
         .nav-link .material-icons {
-            margin-right: 15px; /* ★変更：アイコンとの距離を少し詰める */
+            margin-right: 18px;
             color: #5f6368;
-            font-size: 22px;
+            font-size: 24px;
         }
         
-        /* ラベル（タグ）セクションのタイトル */
         .nav-section-label {
-            padding: 15px 15px 5px 15px;
+            padding: 15px 24px 5px 24px;
             font-size: 12px;
             color: #5f6368;
             font-weight: bold;
@@ -128,16 +131,27 @@
             font-size: 11px; color: #9aa0a6; margin-top: 8px; display: flex; align-items: center; justify-content: space-between;
         }
 
-        /* 空の状態 */
         .empty-state { text-align: center; margin-top: 100px; color: #5f6368; }
 
-        /* FAB */
+        /* ▼▼▼ 追加ボタン（修正） ▼▼▼ */
         .fab-add {
-            position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px;
-            background-color: #fff; border-radius: 50%;
+            position: fixed; 
+            bottom: 24px; 
+            right: 24px; 
+            width: 56px; 
+            height: 56px;
+            background-color: #fff; 
+            border-radius: 50%;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            display: flex; align-items: center; justify-content: center;
-            text-decoration: none; z-index: 1000;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            text-decoration: none; 
+            transition: transform 0.2s;
+
+            /* ★重要：z-indexを下げました（指定なし、または100程度） */
+            /* これにより、サイドバーが開いたときの暗い膜（z-index: 1040）の下になり、押せなくなります */
+            z-index: 100; 
         }
         .material-icons.plus-icon {
             font-size: 36px;
