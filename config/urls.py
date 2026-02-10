@@ -38,6 +38,9 @@ urlpatterns = [
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'), # トークン更新
     path('api/auth/user/', UserDetailView.as_view(), name='user_detail'), # ログイン中のユーザー情報
 
+    # ★追加：削除用のURL
+    path('articles/<int:pk>/delete/', article_views.article_delete, name='article_delete'),
+
     # ログイン・ログアウト用URL
     path('accounts/login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'), # 1. ログイン画面のURLを 'accounts/login/' に変更します
 

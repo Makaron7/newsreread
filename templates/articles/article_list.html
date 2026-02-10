@@ -255,9 +255,21 @@
 
                         <div class="card-meta">
                             <span>{{ article.saved_at|date:"n/j" }}</span>
-                            <a href="{% url 'article_update' article.id %}" style="color: #5f6368; text-decoration: none; padding: 5px;">
-                                <span class="material-icons" style="font-size: 18px;">edit</span>
-                            </a>
+                                
+                            <div style="display: flex; align-items: center;">
+                                
+                                <form action="{% url 'article_delete' article.id %}" method="post" style="margin: 0;" onsubmit="return confirm('本当にこの記事を削除しますか？');">
+                                    {% csrf_token %}
+                                    <button type="submit" style="border: none; background: none; color: #5f6368; padding: 5px; cursor: pointer; display: flex;">
+                                        <span class="material-icons" style="font-size: 18px;">delete</span>
+                                    </button>
+                                </form>
+
+                                <a href="{% url 'article_update' article.id %}" style="color: #5f6368; text-decoration: none; padding: 5px; display: flex;">
+                                    <span class="material-icons" style="font-size: 18px;">edit</span>
+                                </a>
+
+                            </div>
                         </div>
                     </div>
                 </div>
