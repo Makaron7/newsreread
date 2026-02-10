@@ -1,9 +1,13 @@
 # Standard Library
 from datetime import timedelta
+# ▼▼▼ 追加：ウェブサイトにアクセスして解析するためのライブラリ ▼▼▼
+import requests
+from bs4 import BeautifulSoup
+# ▲▲▲ 追加ここまで ▲▲▲
 
 # Django Core
 from django.shortcuts import render, redirect, get_object_or_404 # ★追加：HTMLを表示するために必要
-from .forms import ArticleEditForm # ★追加：編集用フォームをインポート
+from .forms import ArticleEditForm, ArticleShareForm # ArticleShareFormを追加 # ★追加：編集用フォームをインポート
 from django.contrib.auth.decorators import login_required # ★追加：ログイン必須にするために必要
 from django.db.models import F, Count
 from django.db.models.functions import TruncMonth
@@ -28,6 +32,7 @@ from .serializers import (
     QuestionSerializer, 
     ActionItemSerializer
 )
+
 # ★ここから追加
 class RegisterView(generics.CreateAPIView):
     """
@@ -294,7 +299,8 @@ def article_list(request):
     tags = Tag.objects.filter(user=request.user)
 
     context = {
-        'articles': articles
+        'articles': articles,
+        'tags': tags, # テンプレートにタグリストを渡す
     }
     # 以前作成した templates/articles/article_list.html を表示する
     return render(request, 'articles/article_list.html', context)
@@ -322,3 +328,69 @@ def article_update(request, pk):
         'form': form,
         'article': article
     })
+
+def article_share(request):
+    """
+    共有ボタンから呼ばれる簡易保存画面
+    """
+    # URLパラメータから初期値を取得
+    initial_url = request.GET.get('url', '')
+    
+    if request.method == 'POST':
+        form = ArticleShareForm(request.POST)
+        if form.is_valid():
+            # フォームからデータを取り出す
+            url = form.cleaned_data['url']
+            status = form.cleaned_data['status']
+            priority = form.cleaned_data['priority']
+            next_reminder_date = form.cleaned_data['next_reminder_date']
+
+            # URLからCachedURLを取得または作成
+            cached_url, created = CachedURL.objects.get_or_create(url=url)
+            
+            # ▼▼▼ 追加：タイトルが空なら、Webから取得して保存する ▼▼▼
+            if not cached_url.title:
+                try:
+                    # サイトにアクセス（5秒でタイムアウト、User-Agentを設定して拒否を防ぐ）
+                    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                    response = requests.get(url, headers=headers, timeout=5)
+                    response.encoding = response.apparent_encoding # 文字化け対策
+                    
+                    # HTMLからタイトルを抜き出す
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    if soup.title and soup.title.string:
+                        cached_url.title = soup.title.string
+                        cached_url.save()
+                        
+                except Exception as e:
+                    print(f"タイトルの取得に失敗しました: {e}")
+            # ▲▲▲ 追加ここまで ▲▲▲
+
+            # 記事を作成（重複チェックなどは必要に応じて追加）
+            Article.objects.create(
+                user=request.user,
+                cached_url=cached_url,
+                status=status,
+                priority=priority,
+                next_reminder_date=next_reminder_date
+            )
+            
+            return redirect('home')
+    else:
+        # 初期表示：URLだけ埋め込んだフォームを作る
+        form = ArticleShareForm(initial={'url': initial_url})
+
+    return render(request, 'articles/article_share.html', {'form': form})
+
+def article_delete(request, pk):
+    """
+    指定されたIDの記事を削除する
+    """
+    article = get_object_or_404(Article, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        article.delete()
+        return redirect('home')
+        
+    # GETでアクセスされた場合はホームに戻す（安全対策）
+    return redirect('home')

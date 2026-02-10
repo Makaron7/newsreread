@@ -52,3 +52,27 @@ class ArticleEditForm(forms.ModelForm):
         # タグの選択肢を「自分が作ったタグ」だけに絞り込む
         if user:
             self.fields['tags'].queryset = Tag.objects.filter(user=user)
+
+
+class ArticleShareForm(forms.ModelForm):
+    # URLはArticleモデルに直接ないので、ここで定義します
+    url = forms.URLField(
+        label='URL', 
+        widget=forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'})
+    )
+
+    class Meta:
+        model = Article
+        fields = ['status', 'priority', 'next_reminder_date']
+        
+        labels = {
+            'status': '状態',
+            'priority': '優先度',
+            'next_reminder_date': '次回リマインド日時',
+        }
+        
+        widgets = {
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'priority': forms.Select(attrs={'class': 'form-select'}),
+            'next_reminder_date': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+        }            
