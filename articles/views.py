@@ -295,6 +295,9 @@ def article_list(request):
     status_filter = request.GET.get('status')
     if status_filter:
         articles = articles.filter(status=status_filter)
+    else:
+        # ★追加：「すべてのメモ」のときは、アーカイブとゴミ箱を【除外】して表示する
+        articles = articles.exclude(status__in=['archived', 'trash'])
 
     # 2. URLに ?tag=1 のような指定があれば絞り込む
     tag_id = request.GET.get('tag')
@@ -390,15 +393,16 @@ def article_share(request):
 
 def article_delete(request, pk):
     """
-    指定されたIDの記事を削除する
+    記事をゴミ箱に移動する（ソフトデリート）
     """
     article = get_object_or_404(Article, pk=pk, user=request.user)
     
     if request.method == 'POST':
-        article.delete()
+        # ★変更：完全に削除(delete)するのではなく、ステータスをゴミ箱に変える
+        article.status = 'trash'
+        article.save()
         return redirect('home')
         
-    # GETでアクセスされた場合はホームに戻す（安全対策）
     return redirect('home')
 
 # ▼▼▼ 今回追加するJSON保存用のAPI ▼▼▼

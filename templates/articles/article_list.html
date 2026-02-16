@@ -171,6 +171,10 @@
                 ラベル
             {% elif request.GET.status == 'read_later' %}
                 後で読む    
+            {% elif request.GET.status == 'archived' %}
+                アーカイブ
+            {% elif request.GET.status == 'trash' %}
+                ゴミ箱
             {% else %}
                 Newsreread
             {% endif %}
@@ -200,10 +204,9 @@
                 
                 <div class="nav-section-label">
                     <span>ラベル</span>
-                    <span style="font-size: 10px; cursor: pointer;">編集</span>
                 </div>
 
-                {% for tag in tags %}
+{% for tag in tags %}
                 <a class="nav-link {% if request.GET.tag == tag.id|stringformat:'s' %}active{% endif %}" 
                    href="{% url 'home' %}?tag={{ tag.id }}">
                     <span class="material-icons">label</span>
@@ -213,10 +216,16 @@
 
                 <div class="mt-2 border-top pt-2">
                     <a class="nav-link" href="#">
+                        <span class="material-icons">edit</span>
+                        ラベルの編集
+                    </a>
+                    
+                    <a class="nav-link {% if request.GET.status == 'archived' %}active{% endif %}" href="{% url 'home' %}?status=archived">
                         <span class="material-icons">archive</span>
                         アーカイブ
                     </a>
-                    <a class="nav-link" href="#">
+                    
+                    <a class="nav-link {% if request.GET.status == 'trash' %}active{% endif %}" href="{% url 'home' %}?status=trash">
                         <span class="material-icons">delete</span>
                         ゴミ箱
                     </a>
@@ -265,7 +274,7 @@
                                 
                             <div style="display: flex; align-items: center;">
                                 
-                                <form action="{% url 'article_delete' article.id %}" method="post" style="margin: 0;" onsubmit="return confirm('本当にこの記事を削除しますか？');">
+                                <form action="{% url 'article_delete' article.id %}" method="post" style="margin: 0;" onsubmit="return confirm('ゴミ箱に移動しますか？');">
                                     {% csrf_token %}
                                     <button type="submit" style="border: none; background: none; color: #5f6368; padding: 5px; cursor: pointer; display: flex;">
                                         <span class="material-icons" style="font-size: 18px;">delete</span>

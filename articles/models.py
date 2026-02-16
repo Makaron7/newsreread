@@ -50,6 +50,7 @@ class Article(models.Model):
         ('reread', '要再読'),
         ('hof', '殿堂入り'), # Hall of Fame
         ('archived', 'アーカイブ'),
+        ('trash', 'ゴミ箱'),
     ]
     # 重要度の選択肢 (機能4-3)
     PRIORITY_CHOICES = [
