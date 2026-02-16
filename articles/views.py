@@ -16,7 +16,8 @@ from django.utils import timezone
 # Third-Party Libraries (DRF, Django-Filter)
 from rest_framework import viewsets, permissions, status, generics # ★ generics を追加
 from django.contrib.auth.models import User # ★ User を追加
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes # ★ api_view, permission_classes を追加
+from rest_framework.permissions import IsAuthenticated # ★ IsAuthenticated を追加
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
@@ -290,6 +291,11 @@ def article_list(request):
     # 1. ログインユーザーの全記事を、保存日が新しい順に取得
     articles = Article.objects.filter(user=request.user).order_by('-saved_at')
     
+    # ★追加：URLに ?status=read_later のような指定があれば、その状態で絞り込む
+    status_filter = request.GET.get('status')
+    if status_filter:
+        articles = articles.filter(status=status_filter)
+
     # 2. URLに ?tag=1 のような指定があれば絞り込む
     tag_id = request.GET.get('tag')
     if tag_id:
@@ -394,3 +400,44 @@ def article_delete(request, pk):
         
     # GETでアクセスされた場合はホームに戻す（安全対策）
     return redirect('home')
+
+# ▼▼▼ 今回追加するJSON保存用のAPI ▼▼▼
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_share_json(request):
+    """
+    Androidアプリの裏側からJSONで送られてくるURLを受け取って保存するAPI
+    """
+    # 1. 送られてきたJSONデータ（小包）から "url" を取り出す
+    url = request.data.get('url')
+    if not url:
+        return Response({'error': 'URLがありません'}, status=400)
+
+    # 2. URLからCachedURLを取得または作成
+    cached_url, created = CachedURL.objects.get_or_create(url=url)
+    
+    # 3. タイトルがなければ取得する（前回作った仕組みを再利用）
+    if not cached_url.title:
+        try:
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+            response = requests.get(url, headers=headers, timeout=5)
+            response.encoding = response.apparent_encoding
+            soup = BeautifulSoup(response.content, 'html.parser')
+            if soup.title and soup.title.string:
+                cached_url.title = soup.title.string
+                cached_url.save()
+        except Exception as e:
+            print(f"タイトルの取得に失敗しました: {e}")
+
+    # 4. 記事を作成（お友達のアドバイス通り、一旦「後で読むストック(unread)」として保存）
+    Article.objects.get_or_create(
+        user=request.user,
+        cached_url=cached_url,
+        defaults={
+            'status': 'read_later', 
+            'priority': 'medium'
+        }
+    )
+    
+    # 5. アプリ側に「成功したよ！」と返事（JSON）を返す
+    return Response({'message': '保存しました'})

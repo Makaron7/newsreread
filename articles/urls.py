@@ -15,4 +15,6 @@ urlpatterns = [
     path('statistics/', StatisticsView.as_view(), name='statistics'),
 
     path('share/', views.article_share, name='article_share'), # ★追加、簡易な共有機能
+
+    path('share/json/', views.api_share_json, name='api_share_json'), # ★追加：jsonで共有するためのAPIエンドポイント
 ]

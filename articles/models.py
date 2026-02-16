@@ -45,6 +45,7 @@ class Article(models.Model):
     # ステータスの選択肢 (機能4)
     STATUS_CHOICES = [
         ('unread', '未読'),
+        ('read_later', '後で読む'), 
         ('read', '読了'),
         ('reread', '要再読'),
         ('hof', '殿堂入り'), # Hall of Fame

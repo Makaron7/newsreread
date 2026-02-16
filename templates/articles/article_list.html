@@ -169,6 +169,8 @@
         <div class="app-title">
             {% if request.GET.tag %}
                 ラベル
+            {% elif request.GET.status == 'read_later' %}
+                後で読む    
             {% else %}
                 Newsreread
             {% endif %}
@@ -183,14 +185,19 @@
             <nav class="nav flex-column">
                 <a class="nav-link {% if not request.GET.tag %}active{% endif %}" href="{% url 'home' %}">
                     <span class="material-icons">lightbulb</span>
-                    メモ
+                    すべてのメモ
                 </a>
-                
+
                 <a class="nav-link" href="#">
                     <span class="material-icons">notifications</span>
                     リマインダー
                 </a>
 
+                <a class="nav-link {% if request.GET.status == 'read_later' %}active{% endif %}" href="{% url 'home' %}?status=read_later">
+                    <span class="material-icons">watch_later</span>
+                    後で読む
+                </a>
+                
                 <div class="nav-section-label">
                     <span>ラベル</span>
                     <span style="font-size: 10px; cursor: pointer;">編集</span>
