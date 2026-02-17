@@ -25,6 +25,9 @@ Thumbs.db
 # ログファイル
 *.log
 
+# 環境変数ファイル
+.env
+
 # IDE/エディタ設定 (任意)
 .vscode/
 .idea/

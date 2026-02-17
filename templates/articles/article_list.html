@@ -9,17 +9,50 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     
     <style>
+        /* ダークモード対応のCSS変数 */
+        :root {
+            --color-bg: #fff;
+            --color-bg-secondary: #f1f3f4;
+            --color-text-primary: #202124;
+            --color-text-secondary: #5f6368;
+            --color-text-tertiary: #9aa0a6;
+            --color-border: #e0e0e0;
+            --color-card-bg: #fff;
+            --color-bar-bg: #fff;
+            --color-bar-shadow: rgba(0,0,0,0.1);
+            --color-butten-bg: #f8f9fa;
+        }
+
+        [data-theme="dark"] {
+            --color-bg: #1a1a1a;
+            --color-bg-secondary: #2a2a2a;
+            --color-text-primary: #e0e0e0;
+            --color-text-secondary: #a0a0a0;
+            --color-text-tertiary: #707070;
+            --color-border: #3a3a3a;
+            --color-card-bg: #262626;
+            --color-bar-bg: #1e1e1e;
+            --color-bar-shadow: rgba(0,0,0,0.3);
+            --color-butten-bg: #333;
+        }
+
+        .fab-add {
+            background-color: var(--color-butten-bg);
+        }
+
         body {
-            background-color: #fff;
+            background-color: var(--color-bg);
             padding-bottom: 80px;
             font-family: 'Roboto', sans-serif;
+            color: var(--color-text-primary);
+            transition: background-color 0.3s, color 0.3s;
         }
 
         /* ヘッダー */
         .app-bar {
-            background-color: #fff;
+            background-color: var(--color-bar-bg);
             padding: 10px 15px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 2px var(--color-bar-shadow);
             position: sticky;
             top: 0;
             z-index: 100;
@@ -35,11 +68,13 @@
             margin-right: 0;
             padding: 8px;
             border-radius: 50%;
-            color: #5f6368;
+            color: var(--color-text-secondary);
             cursor: pointer;
             display: flex;
+            transition: 0.2s;
         }
-        .btn-menu:active { background-color: #f1f3f4; }
+        .btn-menu:hover { background-color: var(--color-bg-secondary); }
+        .btn-menu:active { background-color: var(--color-bg-secondary); }
 
         .app-title {
             font-size: 22px;
@@ -58,7 +93,7 @@
             flex: 1;
             display: flex;
             align-items: center;
-            background: #f1f3f4;
+            background: var(--color-bg-secondary);
             border-radius: 4px;
             padding: 8px 12px;
             margin: 0 10px;
@@ -69,6 +104,10 @@
             flex: 1;
             outline: none;
             font-size: 14px;
+            color: var(--color-text-primary);
+        }
+        .search-bar input::placeholder {
+            color: var(--color-text-tertiary);
         }
 
         /* ▼▼▼ サイドバーの設定 ▼▼▼ */
@@ -77,6 +116,8 @@
             max-width: 90%;
             border-right: none;
             z-index: 1045;
+            background-color: var(--color-card-bg) !important;
+            color: var(--color-text-primary) !important;
         }
 
         .sidebar-header {
@@ -87,10 +128,11 @@
             align-items: center;
             text-shadow: 0px 1px 2px rgba(0,0,0,0.1);
             font-weight: bold;
+            border-bottom: 1px solid var(--color-border);
         }
         
         .nav-link {
-            color: #202124;
+            color: var(--color-text-primary);
             padding: 12px 24px;
             font-size: 15px;
             font-weight: 500;
@@ -101,23 +143,23 @@
             text-decoration: none;
         }
         .nav-link:hover {
-            background-color: #f1f3f4;
-            color: #202124;
+            background-color: var(--color-bg-secondary);
+            color: var(--color-text-primary);
         }
         .nav-link.active {
-            background-color: #e0f2f1;
+            background-color: rgba(0, 139, 139, 0.15);
             color: #008b8b;
         }
         .nav-link .material-icons {
             margin-right: 18px;
-            color: #5f6368;
+            color: var(--color-text-secondary);
             font-size: 24px;
         }
         
         .nav-section-label {
             padding: 15px 24px 5px 24px;
             font-size: 12px;
-            color: #5f6368;
+            color: var(--color-text-secondary);
             font-weight: bold;
             display: flex;
             justify-content: space-between;
@@ -129,14 +171,15 @@
             display: flex;
             gap: 10px;
             padding: 10px 15px;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid var(--color-border);
             flex-wrap: wrap;
             align-items: center;
         }
 
         .btn-sort, .btn-filter, .btn-view {
-            border: 1px solid #dadce0;
-            background: #fff;
+            border: 1px solid var(--color-border);
+            background: var(--color-card-bg);
+            color: var(--color-text-primary);
             padding: 8px 16px;
             border-radius: 4px;
             font-size: 13px;
@@ -147,10 +190,10 @@
             transition: 0.2s;
         }
         .btn-sort:hover, .btn-filter:hover, .btn-view:hover {
-            background: #f1f3f4;
+            background: var(--color-bg-secondary);
         }
         .btn-sort.active, .btn-filter.active {
-            background: #e0f2f1;
+            background: rgba(0, 139, 139, 0.15);
             color: #008b8b;
             border-color: #008b8b;
         }
@@ -165,27 +208,27 @@
 
         /* カードデザイン */
         .note-card {
-            background-color: #fff;
+            background-color: var(--color-card-bg);
             border-radius: 8px;
-            border: 1px solid #e0e0e0;
+            border: 1px solid var(--color-border);
             margin-bottom: 10px;
             break-inside: avoid;
             position: relative;
-            transition: box-shadow 0.2s;
+            transition: box-shadow 0.2s, background-color 0.3s;
         }
         .note-card:hover {
             box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
         }
         .card-body { padding: 12px; }
         .card-title {
-            font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #202124; line-height: 1.4;
+            font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--color-text-primary); line-height: 1.4;
         }
-        .card-text { font-size: 13px; color: #5f6368; margin-bottom: 0; word-break: break-all; }
+        .card-text { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 0; word-break: break-all; }
         .card-meta {
-            font-size: 11px; color: #9aa0a6; margin-top: 8px; display: flex; align-items: center; justify-content: space-between;
+            font-size: 11px; color: var(--color-text-tertiary); margin-top: 8px; display: flex; align-items: center; justify-content: space-between;
         }
 
-        .empty-state { text-align: center; margin-top: 100px; color: #5f6368; }
+        .empty-state { text-align: center; margin-top: 100px; color: var(--color-text-secondary); }
 
         /* 読み込み表示 */
         .loading-spinner {
@@ -209,7 +252,7 @@
             right: 24px; 
             width: 56px; 
             height: 56px;
-            background-color: #fff; 
+            background-color: var(--color-card-bg); 
             border-radius: 50%;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
             display: flex; 
@@ -230,7 +273,7 @@
         }
         .material-icons.plus-icon {
             font-size: 36px;
-            background: -webkit-linear-gradient(45deg, #ea4335, #fbbc04, #34a853, #4285f4);
+            background: -webkit-linear-gradient(45deg, #ff6b6b, #ffd93d, #6bcf7f, #4d96ff);
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -261,6 +304,73 @@
         .status-unread { background: #fff3cd; color: #856404; }
         .status-read_later { background: #d1ecf1; color: #0c5460; }
 
+        /* ドロップダウンメニュー */
+        .dropdown-menu {
+            background-color: var(--color-card-bg);
+            border-color: var(--color-border);
+            color: var(--color-text-primary);
+        }
+        .dropdown-menu .dropdown-item {
+            color: var(--color-text-primary);
+            background-color: var(--color-card-bg);
+        }
+        .dropdown-menu .dropdown-item:hover {
+            background-color: var(--color-bg-secondary);
+            color: var(--color-text-primary);
+        }
+
+        /* モーダル */
+        .modal-content {
+            background-color: var(--color-card-bg) !important;
+            color: var(--color-text-primary) !important;
+        }
+        .modal-header {
+            border-color: var(--color-border) !important;
+        }
+        .modal-footer {
+            border-color: var(--color-border) !important;
+        }
+        .modal-body {
+            color: var(--color-text-primary) !important;
+        }
+        .btn-close {
+            filter: invert(1);
+        }
+        [data-theme="light"] .btn-close {
+            filter: invert(0);
+        }
+
+        /* フォーム要素 */
+        .form-control {
+            background-color: var(--color-card-bg);
+            border-color: var(--color-border);
+            color: var(--color-text-primary);
+        }
+        .form-control:focus {
+            background-color: var(--color-card-bg);
+            border-color: #008b8b;
+            color: var(--color-text-primary);
+            box-shadow: 0 0 0 0.2rem rgba(0, 139, 139, 0.25);
+        }
+        .form-control::placeholder {
+            color: var(--color-text-tertiary);
+            opacity: 1;
+        }
+        .form-label {
+            color: var(--color-text-primary);
+        }
+        .alert {
+            background-color: var(--color-bg-secondary);
+            border-color: var(--color-border);
+            color: var(--color-text-primary);
+        }
+
+        /* ローディングスピナー */
+        .spinner-border {
+            border-color: var(--color-text-tertiary);
+            border-right-color: #008b8b;
+        }
+
         @media (max-width: 640px) {
             .masonry-container { column-count: 1; }
             .toolbar { flex-direction: column; gap: 0; }
@@ -276,9 +386,12 @@
         </button>
         <div class="app-title" style="cursor: pointer;" onclick="goHome()" title="ホームに戻る">Newsreread</div>
         <div class="search-bar">
-            <span class="material-icons" style="font-size: 20px; color: #5f6368;">search</span>
+            <span class="material-icons" style="font-size: 20px; color: var(--color-text-secondary);">search</span>
             <input type="text" id="searchInput" placeholder="検索...">
         </div>
+        <button class="btn-menu" id="themeToggle" title="テーマ切り替え">
+            <span class="material-icons">brightness_4</span>
+        </button>
     </div>
 
     <!-- ツールバー -->
@@ -294,20 +407,20 @@
     </div>
 
     <!-- ソートメニュー（非表示） -->
-    <div id="sortMenu" style="display: none; position: fixed; top: 120px; left: 10px; background: white; border: 1px solid #e0e0e0; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 200; min-width: 180px;">
-        <button class="dropdown-item" onclick="setSortBy('saved_at')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">保存日の新しい順</button>
-        <button class="dropdown-item" onclick="setSortBy('-saved_at')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">保存日の古い順</button>
-        <button class="dropdown-item" onclick="setSortBy('title')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">タイトルで昇順</button>
-        <button class="dropdown-item" onclick="setSortBy('-priority')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">優先度の高い順</button>
+    <div id="sortMenu" style="display: none; position: fixed; top: 120px; left: 10px; background-color: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 200; min-width: 180px; transition: 0.3s;">
+        <button class="dropdown-item" onclick="setSortBy('saved_at')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px; color: var(--color-text-primary); cursor: pointer;">保存日の新しい順</button>
+        <button class="dropdown-item" onclick="setSortBy('-saved_at')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px; color: var(--color-text-primary); cursor: pointer;">保存日の古い順</button>
+        <button class="dropdown-item" onclick="setSortBy('title')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px; color: var(--color-text-primary); cursor: pointer;">タイトルで昇順</button>
+        <button class="dropdown-item" onclick="setSortBy('-priority')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px; color: var(--color-text-primary); cursor: pointer;">優先度の高い順</button>
     </div>
 
     <!-- フィルターメニュー（非表示） -->
-    <div id="filterMenu" style="display: none; position: fixed; top: 120px; left: 100px; background: white; border: 1px solid #e0e0e0; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 200; min-width: 160px;">
-        <button class="dropdown-item" onclick="setStatusFilter('all')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">すべて</button>
-        <button class="dropdown-item" onclick="setStatusFilter('unread')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">未読</button>
-        <button class="dropdown-item" onclick="setStatusFilter('read_later')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">後で読む</button>
-        <button class="dropdown-item" onclick="setStatusFilter('read')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">読了</button>
-        <button class="dropdown-item" onclick="setStatusFilter('favorite')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">お気に入り</button>
+    <div id="filterMenu" style="display: none; position: fixed; top: 120px; left: 100px; background-color: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 200; min-width: 160px; transition: 0.3s;">
+        <button class="dropdown-item" onclick="setStatusFilter('all')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px; color: var(--color-text-primary); cursor: pointer;">すべて</button>
+        <button class="dropdown-item" onclick="setStatusFilter('unread')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px; color: var(--color-text-primary); cursor: pointer;">未読</button>
+        <button class="dropdown-item" onclick="setStatusFilter('read_later')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px; color: var(--color-text-primary); cursor: pointer;">後で読む</button>
+        <button class="dropdown-item" onclick="setStatusFilter('read')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px; color: var(--color-text-primary); cursor: pointer;">読了</button>
+        <button class="dropdown-item" onclick="setStatusFilter('favorite')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px; color: var(--color-text-primary); cursor: pointer;">お気に入り</button>
     </div>
 
     <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu">
@@ -413,6 +526,25 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
                     <button type="button" class="btn btn-primary" id="submitArticle">追加</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 記事詳細モーダル -->
+    <div class="modal fade" id="articleDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" style="background-color: var(--color-card-bg); color: var(--color-text-primary);">
+                <div class="modal-header" style="border-color: var(--color-border);">
+                    <h5 class="modal-title" id="detailTitle"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="detailContent" style="max-height: 60vh; overflow-y: auto;"></div>
+                </div>
+                <div class="modal-footer" style="border-color: var(--color-border);">
+                    <a id="detailLink" href="#" target="_blank" class="btn btn-primary">元記事を開く</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
                 </div>
             </div>
         </div>
@@ -571,18 +703,18 @@
             }
 
             const cardHtml = `
-                <div class="note-card" style="animation: fadeIn 0.3s;" data-article-id="${article.id}">
+                <div class="note-card" style="animation: fadeIn 0.3s; cursor: pointer;" data-article-id="${article.id}" onclick="showArticleDetail(${article.id})">
                     <div class="card-body">
                         <div class="card-title">
-                            <a href="${displayUrl}" target="_blank" rel="noopener" style="text-decoration: none; color: inherit;">
+                            <span style="text-decoration: none; color: inherit;">
                                 ${displayTitle}
-                            </a>
+                            </span>
                         </div>
                         <div style="display: flex; align-items: center; margin-top: 6px; margin-bottom: 4px;">
                             <img src="https://www.google.com/s2/favicons?domain=${domain}" alt="" style="width: 16px; height: 16px; margin-right: 6px;" onerror="this.style.display='none'">
-                            <span style="font-size: 12px; color: #5f6368;">${truncatedDisplayName}</span>
+                            <span style="font-size: 12px; color: var(--color-text-secondary);">${truncatedDisplayName}</span>
                         </div>
-                        <div class="card-text" style="font-size: 12px; color: #70757a;">
+                        <div class="card-text" style="font-size: 12px; color: var(--color-text-secondary);">
                             ${truncatedUrl}
                         </div>
                         ${statusBadgeHtml}
@@ -590,14 +722,14 @@
                         <div class="card-meta">
                             <span>${formattedDate}</span>
                             <div style="display: flex; align-items: center; gap: 5px;">
-                                <form action="/articles/${article.id}/edit/" method="get" style="margin: 0;">
-                                    <button type="submit" style="border: none; background: none; color: #5f6368; padding: 5px; cursor: pointer; display: flex;">
+                                <form action="/articles/${article.id}/edit/" method="get" style="margin: 0;" onclick="event.stopPropagation();">
+                                    <button type="submit" style="border: none; background: none; color: var(--color-text-secondary); padding: 5px; cursor: pointer; display: flex;">
                                         <span class="material-icons" style="font-size: 18px;">edit</span>
                                     </button>
                                 </form>
-                                <form action="/articles/${article.id}/delete/" method="post" style="margin: 0;" onsubmit="return confirm('ゴミ箱に移動しますか？');">
+                                <form action="/articles/${article.id}/delete/" method="post" style="margin: 0;" onsubmit="event.stopPropagation(); return confirm('ゴミ箱に移動しますか？');" onclick="event.stopPropagation();">
                                     <input type="hidden" name="csrfmiddlewaretoken" value="${csrftoken}">
-                                    <button type="submit" style="border: none; background: none; color: #5f6368; padding: 5px; cursor: pointer; display: flex;">
+                                    <button type="submit" style="border: none; background: none; color: var(--color-text-secondary); padding: 5px; cursor: pointer; display: flex;">
                                         <span class="material-icons" style="font-size: 18px;">delete</span>
                                     </button>
                                 </form>
@@ -742,8 +874,127 @@
             window.location.href = '{% url "home" %}';
         }
 
+        // ========== ダークモード機能 ==========
+        // localStorage からテーマを取得、デフォルトはライト
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            setTheme(savedTheme);
+        }
+
+        // テーマを設定して localStorage に保存
+        function setTheme(theme) {
+            if (theme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.getElementById('themeToggle').innerHTML = '<span class="material-icons">brightness_7</span>';
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                document.getElementById('themeToggle').innerHTML = '<span class="material-icons">brightness_4</span>';
+            }
+            localStorage.setItem('theme', theme);
+        }
+
+        // テーマ切り替えボタンの処理
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            setTheme(newTheme);
+        });
+
+        // ドロップダウンメニュー項目のホバー効果を追加
+        document.querySelectorAll('.dropdown-item').forEach(item => {
+            item.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = 'var(--color-bg-secondary)';
+            });
+            item.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = 'transparent';
+            });
+        });
+
         // ページ読み込み時に記事を初期化
+        initTheme();
         initPage();
+
+        // ========== 記事詳細モーダル ==========
+        async function showArticleDetail(articleId) {
+            try {
+                const response = await fetch(`/api/articles/${articleId}/`, {
+                    headers: { 'X-CSRFToken': csrftoken },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) throw new Error('記事取得エラー');
+                
+                const article = await response.json();
+
+                // モーダルのタイトル設定
+                document.getElementById('detailTitle').textContent = article.title || 'タイトルなし';
+
+                // 記事詳細コンテンツを生成
+                let detailHtml = `
+                    <div style="margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; margin-bottom: 15px; gap: 10px;">
+                            <img src="https://www.google.com/s2/favicons?domain=${new URL(article.url).hostname}" alt="" style="width: 24px; height: 24px;" onerror="this.style.display='none'">
+                            <div>
+                                <div style="font-size: 12px; color: var(--color-text-secondary);">${article.site_name || new URL(article.url).hostname}</div>
+                                <div style="font-size: 11px; color: var(--color-text-tertiary);">${new Date(article.saved_at).toLocaleString('ja-JP')}</div>
+                            </div>
+                        </div>
+
+                        <!-- ステータスとお気に入り-->
+                        <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+                            ${article.status === 'read' ? '<span class="status-badge status-read">読了</span>' : ''}
+                            ${article.status === 'read_later' ? '<span class="status-badge status-read_later">後で読む</span>' : ''}
+                            ${article.is_favorite ? '<span class="status-badge" style="background: #ffeaa7; color: #2d3436;">⭐ お気に入り</span>' : ''}
+                        </div>
+
+                        <!-- URL -->
+                        <div style="margin-bottom: 15px; padding: 10px; background: var(--color-bg-secondary); border-radius: 4px; word-break: break-all;">
+                            <a href="${article.url}" target="_blank" style="color: #0066cc; text-decoration: none; font-size: 12px;">
+                                ${article.url}
+                            </a>
+                        </div>
+
+                        <!-- メモ -->
+                        ${article.user_memo ? `
+                        <div style="margin-bottom: 15px; padding: 10px; border-left: 3px solid #008b8b; background: var(--color-bg-secondary); border-radius: 4px;">
+                            <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 5px;">メモ</div>
+                            <div style="font-size: 14px; white-space: pre-wrap; word-break: break-word;">${article.user_memo}</div>
+                        </div>
+                        ` : ''}
+
+                        <!-- タグ -->
+                        ${article.tags && article.tags.length > 0 ? `
+                        <div style="margin-bottom: 15px;">
+                            <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 5px;">タグ</div>
+                            <div>
+                                ${article.tags.map(tag => `<span style="font-size: 12px; background: var(--color-bg-secondary); padding: 4px 8px; border-radius: 4px; margin-right: 4px; display: inline-block;">${tag.name}</span>`).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- 統計情報 -->
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--color-border);">
+                            <div style="font-size: 12px; color: var(--color-text-secondary); display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div>読取回数: <strong>${article.read_count}</strong></div>
+                                <div>優先度: <strong>${article.priority || '-'}</strong></div>
+                                ${article.last_read_at ? `<div>最終閲覧: <strong>${new Date(article.last_read_at).toLocaleString('ja-JP')}</strong></div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('detailContent').innerHTML = detailHtml;
+                document.getElementById('detailLink').href = article.url;
+
+                // モーダルを表示
+                const modal = new bootstrap.Modal(document.getElementById('articleDetailModal'));
+                modal.show();
+
+            } catch (error) {
+                alert('記事の詳細を読み込めませんでした: ' + error.message);
+                console.error(error);
+            }
+        }
 
         // モーダルリセット
         document.getElementById('addArticleModal').addEventListener('hidden.bs.modal', function() {
