@@ -12,6 +12,7 @@ class CachedURL(models.Model):
     title = models.CharField(max_length=200, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     image_url = models.URLField(max_length=2000, blank=True, null=True)
+    site_name = models.CharField(max_length=100, blank=True, null=True)  # サイト名を追加
     last_scraped_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

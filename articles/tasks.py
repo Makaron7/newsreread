@@ -48,13 +48,29 @@ def fetch_article_metadata(cached_url_id):
         if og_image:
             image_url = og_image.get('content')
 
+        # サイト名取得
+        site_name = None
+        og_site_name = soup.find('meta', property='og:site_name')
+        if og_site_name:
+            site_name = og_site_name.get('content')
+        else:
+            # og:site_nameがない場合、application-nameやtwitterのサイト名を試す
+            app_name = soup.find('meta', attrs={'name': 'application-name'})
+            if app_name:
+                site_name = app_name.get('content')
+            else:
+                twitter_site = soup.find('meta', attrs={'name': 'twitter:site'})
+                if twitter_site:
+                    site_name = twitter_site.get('content', '').lstrip('@')
+
         # --- DB (CachedURL) に保存 ---
         cache.title = title
         cache.description = description
         cache.image_url = image_url
+        cache.site_name = site_name
         cache.last_scraped_at = timezone.now()
         cache.save(update_fields=[
-            'title', 'description', 'image_url', 'last_scraped_at'
+            'title', 'description', 'image_url', 'site_name', 'last_scraped_at'
         ])
         print(f"Successfully fetched metadata for {cache.url}")
 

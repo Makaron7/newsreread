@@ -88,6 +88,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         many=True,
         queryset=Tag.objects.all(),
         write_only=True,
+        required=False,  # ★追加：タグは任意にする
         source='tags'
     )
     questions = QuestionSerializer(many=True, read_only=True)
@@ -98,6 +99,7 @@ class ArticleSerializer(serializers.ModelSerializer):
     title = serializers.CharField(source='cached_url.title', read_only=True)
     description = serializers.CharField(source='cached_url.description', read_only=True)
     image_url = serializers.URLField(source='cached_url.image_url', read_only=True)
+    site_name = serializers.CharField(source='cached_url.site_name', read_only=True)
 
     # ★追加：記事保存時に URL を受け取るためのフィールド (書き込み専用)
     url_input = serializers.URLField(write_only=True, required=True)
@@ -111,6 +113,7 @@ class ArticleSerializer(serializers.ModelSerializer):
             'title', 
             'description', 
             'image_url', 
+            'site_name',
             'url_input', # ★ 書き込み用
             # ★ Articleモデル固有のフィールド
             'status', 

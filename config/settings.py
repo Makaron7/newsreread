@@ -25,10 +25,21 @@ SECRET_KEY = 'django-insecure-s=y^@r++pvn)ad((gv04j-c+3+o8j^!2up67ca^5ht+iu6zio!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# 開発環境ではCeleryタスクを同期実行（ワーカーなしで動作）
+if DEBUG:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+
 ALLOWED_HOSTS = [
     '10.0.2.2',      # ★ Androidエミュレータからのアクセスを許可
     '127.0.0.1',   # 既存のlocalhost
     'localhost',     #
+]
+
+# CSRF設定
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
 ]
 
 
