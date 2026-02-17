@@ -100,6 +100,7 @@ def fetch_article_metadata(cached_url_id, article_id=None):
         print(f"Error processing {cache.url}: {e}")
 
 
+@shared_task
 def classify_article(article_id):
     """
     記事をAIで自動分類（カテゴリ・タグ）するタスク

@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from django.shortcuts import render, redirect, get_object_or_404 # ★追加：HTMLを表示するために必要
 from .forms import ArticleEditForm, ArticleShareForm # ArticleShareFormを追加 # ★追加：編集用フォームをインポート
 from django.contrib.auth.decorators import login_required # ★追加：ログイン必須にするために必要
-from django.db.models import F, Count
+from django.db.models import F, Count, Q
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from django.conf import settings
@@ -60,7 +60,7 @@ class UserDetailView(generics.RetrieveAPIView):
         return self.request.user
 # ★ここまで追加
 from .filters import ArticleFilter
-from .tasks import fetch_article_metadata
+from .tasks import fetch_article_metadata, classify_article
 
 # ↓ ここから ViewSet の定義が始まります
 
@@ -265,13 +265,12 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
             if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
                 threading.Thread(
-                    target=fetch_article_metadata,
-                    args=(article.cached_url.id,),
-                    kwargs={'article_id': article.id},
+                    target=classify_article,
+                    args=(article.id,),
                     daemon=True
                 ).start()
             else:
-                fetch_article_metadata.delay(article.cached_url.id, article_id=article.id)
+                classify_article.delay(article.id)
 
             serializer = self.get_serializer(article)
             return Response(serializer.data)
@@ -309,6 +308,20 @@ class ArticleViewSet(viewsets.ModelViewSet):
             classification_status__in=['pending', 'error']
         )
 
+        # タグが空で推奨タグも空の completed も対象に追加（SQLite回避のためPython側で判定）
+        tagless_candidates = self.get_queryset().filter(
+            classification_status='completed',
+            tags__isnull=True
+        ).distinct()
+
+        tagless_ids = []
+        for candidate in tagless_candidates:
+            if candidate.suggested_tags in (None, []):
+                tagless_ids.append(candidate.id)
+
+        if tagless_ids:
+            articles = (articles | self.get_queryset().filter(id__in=tagless_ids)).distinct()
+
         article_ids = list(articles.values_list('id', flat=True))
 
         if not article_ids:
@@ -316,21 +329,13 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
         def run_batch(ids):
             for article_id in ids:
-                try:
-                    article = Article.objects.get(id=article_id)
-                except Article.DoesNotExist:
-                    continue
-                fetch_article_metadata(article.cached_url.id, article_id=article.id)
+                classify_article(article_id)
 
         if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
             threading.Thread(target=run_batch, args=(article_ids,), daemon=True).start()
         else:
             for article_id in article_ids:
-                try:
-                    article = Article.objects.get(id=article_id)
-                except Article.DoesNotExist:
-                    continue
-                fetch_article_metadata.delay(article.cached_url.id, article_id=article_id)
+                classify_article.delay(article_id)
 
         return Response({'count': len(article_ids)})
 # ★ここから追加

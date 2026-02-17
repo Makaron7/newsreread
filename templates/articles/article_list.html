@@ -794,6 +794,7 @@
 
                     if (article.title || article.site_name || article.image_url) {
                         updateCardContent(articleId, article);
+                        maybeAutoReclassify(article);
                         clearInterval(timerId);
                         return;
                     }
@@ -925,6 +926,7 @@
                 
                 // ★記事カードを追加
                 addArticleCard(articleData);
+                maybeAutoReclassify(articleData);
                 
                 // ★バックグラウンドでメタデータ更新をポーリング
                 updateArticleCardAfterScraping(articleData.id);
@@ -1108,6 +1110,14 @@
                             ${article.status === 'read_later' ? '<span class="status-badge status-read_later">後で読む</span>' : ''}
                             ${article.is_favorite ? '<span class="status-badge" style="background: #ffeaa7; color: #2d3436;">⭐ お気に入り</span>' : ''}
                         </div>
+
+                        <!-- 要約 -->
+                        ${article.description ? `
+                        <div style="margin-bottom: 12px; padding: 10px; background: var(--color-bg-secondary); border-radius: 4px;">
+                            <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 6px;">要約</div>
+                            <div style="font-size: 13px; color: var(--color-text-primary); line-height: 1.6; white-space: pre-wrap; word-break: break-word;">${article.description}</div>
+                        </div>
+                        ` : ''}
 
                         <!-- URL -->
                         <div style="margin-bottom: 15px; padding: 10px; background: var(--color-bg-secondary); border-radius: 4px; word-break: break-all;">
