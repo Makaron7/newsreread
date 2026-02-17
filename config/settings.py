@@ -35,6 +35,39 @@ if DEBUG:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
 
+# ★AI分類エンジン設定
+# 'lightweight' = キーワードマッチング版（軽量、高速）
+# 'transformers' = HuggingFace transformers 版（精度重視、GPU推奨）
+AI_CLASSIFICATION_ENGINE = os.getenv('AI_CLASSIFICATION_ENGINE', 'lightweight')
+
+# ★AI カテゴリ候補（SBERT 版で使用）
+AI_CATEGORY_CANDIDATES = [
+    "プログラミング",
+    "AI・機械学習",
+    "インフラ・クラウド",
+    "フロントエンド",
+    "データサイエンス",
+    "セキュリティ",
+    "ビジネス・キャリア",
+    "経済・金融",
+    "政治",
+    "社会",
+    "国際",
+    "科学",
+    "健康・医療",
+    "スポーツ",
+    "エンタメ",
+    "文化・アート",
+    "生活・暮らし",
+    "教育",
+    "交通・モビリティ",
+    "環境・気候",
+    "ガジェット",
+    "テクノロジー",
+    "ニュース・時事",
+    "その他・ポエム"
+]
+
 ALLOWED_HOSTS = [
     '10.0.2.2',      # ★ Androidエミュレータからのアクセスを許可
     '127.0.0.1',   # 既存のlocalhost

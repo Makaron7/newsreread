@@ -94,6 +94,22 @@ class Article(models.Model):
     repetition_level = models.IntegerField(default=0) # 間隔反復のレベル
     next_reminder_date = models.DateTimeField(blank=True, null=True)
     
+    # ★AI自動分類用フィールド
+    classification_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', '未処理'),
+            ('processing', '処理中'),
+            ('completed', '完了'),
+            ('error', 'エラー'),
+        ],
+        default='pending'
+    )
+    suggested_category = models.CharField(max_length=50, blank=True, null=True)
+    suggested_category_score = models.FloatField(default=0.0)
+    suggested_tags = models.JSONField(default=list, blank=True)  # [{"name": "Python", "score": 0.88}, ...]
+    classification_error = models.TextField(blank=True, null=True)  # エラー時のメッセージ
+    
     class Meta:
         unique_together = ('user', 'cached_url')
 

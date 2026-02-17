@@ -33,7 +33,7 @@
             --color-card-bg: #262626;
             --color-bar-bg: #1e1e1e;
             --color-bar-shadow: rgba(0,0,0,0.3);
-            --color-butten-bg: #333;
+            --color-butten-bg: #3d3a3a;
         }
 
         .fab-add {
@@ -473,6 +473,16 @@
                         ゴミ箱
                     </a>
                 </div>
+
+                <details style="margin: 8px 12px;">
+                    <summary style="font-size: 12px; color: var(--color-text-tertiary); cursor: pointer;">AIメンテ</summary>
+                    <div style="margin-top: 6px;">
+                        <a class="nav-link" href="#" onclick="reclassifyPendingArticles(); return false;" style="font-size: 12px; padding-left: 12px;">
+                            <span class="material-icons" style="font-size: 18px;">auto_fix_high</span>
+                            未評価を再評価
+                        </a>
+                    </div>
+                </details>
                 
                 <div class="mt-2 border-top pt-2">
                     <form action="{% url 'logout' %}" method="post" style="margin:0; padding:0;">
@@ -560,6 +570,7 @@
         let currentStatusFilter = 'all';
         let currentTagFilter = null;
         let searchQuery = '';
+        const autoReclassifyTried = new Set();
 
         const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         const container = document.getElementById('articlesContainer');
@@ -613,7 +624,10 @@
 
                 // 記事を追加
                 if (data.results && data.results.length > 0) {
-                    data.results.forEach(article => addArticleCard(article));
+                    data.results.forEach(article => {
+                        addArticleCard(article);
+                        maybeAutoReclassify(article);
+                    });
                     currentPage++;
                     hasNextPage = !!data.next;
 
@@ -645,6 +659,24 @@
                 isLoadingMore = false;
                 loadingSpinner.classList.remove('active');
             }
+        }
+
+        // タグが空のとき、自動で再評価（1回だけ）
+        function maybeAutoReclassify(article) {
+            const hasTags = Array.isArray(article.tags) && article.tags.length > 0;
+            const hasSuggestedTags = Array.isArray(article.suggested_tags) && article.suggested_tags.length > 0;
+            const shouldTry = !hasTags && !hasSuggestedTags && ['pending', 'error', 'completed'].includes(article.classification_status);
+
+            if (!shouldTry || autoReclassifyTried.has(article.id)) return;
+            autoReclassifyTried.add(article.id);
+
+            fetch(`/api/articles/${article.id}/reclassify/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrftoken },
+                credentials: 'include'
+            }).catch(() => {
+                // 失敗しても再試行しない
+            });
         }
 
         // 記事カードを追加
@@ -742,11 +774,112 @@
             masonry.insertAdjacentHTML('beforeend', cardHtml);
         }
 
+        // スクレイピング完了後にカードを更新
+        function updateArticleCardAfterScraping(articleId) {
+            let attempts = 0;
+            const maxAttempts = 15;
+            const intervalMs = 2000;
+
+            const timerId = setInterval(async () => {
+                attempts += 1;
+                try {
+                    const response = await fetch(`/api/articles/${articleId}/`, {
+                        headers: { 'X-CSRFToken': csrftoken },
+                        credentials: 'include'
+                    });
+
+                    if (!response.ok) throw new Error('API error');
+
+                    const article = await response.json();
+
+                    if (article.title || article.site_name || article.image_url) {
+                        updateCardContent(articleId, article);
+                        clearInterval(timerId);
+                        return;
+                    }
+                } catch (error) {
+                    // 失敗時はリトライを継続
+                }
+
+                if (attempts >= maxAttempts) {
+                    // タイトルが取れない場合は再スクレイプを1回だけ試す
+                    try {
+                        const card = document.querySelector(`.note-card[data-article-id="${articleId}"]`);
+                        const tried = card?.dataset?.rescrapeTried === 'true';
+                        if (!tried) {
+                            if (card) {
+                                card.dataset.rescrapeTried = 'true';
+                            }
+                            await fetch(`/api/articles/${articleId}/rescrape/`, {
+                                method: 'POST',
+                                headers: { 'X-CSRFToken': csrftoken },
+                                credentials: 'include'
+                            });
+                        }
+                    } catch (error) {
+                        // 再取得に失敗しても無視
+                    }
+                    clearInterval(timerId);
+                }
+            }, intervalMs);
+        }
+
+        // カードの内容を更新
+        function updateCardContent(articleId, article) {
+            const card = document.querySelector(`.note-card[data-article-id="${articleId}"]`);
+            if (!card) return;
+
+            const titleElement = card.querySelector('.card-title span');
+            const domainContainer = card.querySelector('.card-body > div:nth-child(2)');
+            const urlElement = card.querySelector('.card-text');
+
+            if (titleElement && article.title) {
+                titleElement.textContent = article.title;
+                titleElement.style.animation = 'none';
+                setTimeout(() => {
+                    titleElement.style.animation = 'fadeIn 0.5s';
+                }, 10);
+            }
+
+            if (article.url && domainContainer) {
+                let domain = '';
+                try {
+                    const urlObj = new URL(article.url);
+                    domain = urlObj.hostname.replace('www.', '');
+                } catch (e) {
+                    domain = article.url;
+                }
+
+                const displayName = article.site_name || domain;
+                const truncatedDisplayName = displayName.length > 25
+                    ? displayName.substring(0, 25) + '...'
+                    : displayName;
+
+                const domainImg = domainContainer.querySelector('img');
+                const domainText = domainContainer.querySelector('span');
+                if (domainImg) {
+                    domainImg.src = `https://www.google.com/s2/favicons?domain=${domain}`;
+                }
+                if (domainText) {
+                    domainText.textContent = truncatedDisplayName;
+                }
+            }
+
+            if (urlElement && article.url) {
+                const truncatedUrl = article.url.length > 35
+                    ? article.url.substring(0, 35) + '...'
+                    : article.url;
+                urlElement.textContent = truncatedUrl;
+            }
+        }
+
         // 記事追加処理
         document.getElementById('submitArticle').addEventListener('click', async function() {
             const urlInput = document.getElementById('articleUrl').value.trim();
             const errorDiv = document.getElementById('addArticleError');
             const submitBtn = this;
+            const modalElement = document.getElementById('addArticleModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
             
             if (!urlInput) {
                 errorDiv.textContent = 'URLを入力してください';
@@ -758,6 +891,9 @@
                 submitBtn.disabled = true;
                 submitBtn.textContent = '追加中...';
                 errorDiv.classList.add('d-none');
+
+                // ★送信直後にモーダルを閉じる
+                modal.hide();
                 
                 const response = await fetch('/api/articles/', {
                     method: 'POST',
@@ -782,16 +918,21 @@
                     throw new Error(errorMessage);
                 }
                 
-                const modal = bootstrap.Modal.getInstance(document.getElementById('addArticleModal'));
-                modal.hide();
+                // ★記事データを取得
+                const articleData = await response.json();
+                
                 document.getElementById('articleUrl').value = '';
                 
-                // ページをリセット
-                await initPage();
+                // ★記事カードを追加
+                addArticleCard(articleData);
+                
+                // ★バックグラウンドでメタデータ更新をポーリング
+                updateArticleCardAfterScraping(articleData.id);
                 
             } catch (error) {
                 errorDiv.textContent = error.message;
                 errorDiv.classList.remove('d-none');
+                modal.show();
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = '追加';
@@ -874,6 +1015,27 @@
             window.location.href = '{% url "home" %}';
         }
 
+        // 未評価を一括再評価
+        async function reclassifyPendingArticles() {
+            try {
+                const response = await fetch('/api/articles/reclassify_pending/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrftoken },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || '再評価に失敗しました');
+                }
+
+                const data = await response.json();
+                alert(`再評価を開始しました（対象 ${data.count} 件）`);
+            } catch (error) {
+                alert('再評価に失敗しました: ' + error.message);
+            }
+        }
+
         // ========== ダークモード機能 ==========
         // localStorage からテーマを取得、デフォルトはライト
         function initTheme() {
@@ -915,7 +1077,7 @@
         initPage();
 
         // ========== 記事詳細モーダル ==========
-        async function showArticleDetail(articleId) {
+        async function showArticleDetail(articleId, shouldShow = true) {
             try {
                 const response = await fetch(`/api/articles/${articleId}/`, {
                     headers: { 'X-CSRFToken': csrftoken },
@@ -980,15 +1142,58 @@
                                 ${article.last_read_at ? `<div>最終閲覧: <strong>${new Date(article.last_read_at).toLocaleString('ja-JP')}</strong></div>` : ''}
                             </div>
                         </div>
+
+                        <!-- ★AI自動分類推奨値 -->
+                        ${article.classification_status === 'completed' && article.suggested_category ? `
+                        <div style="margin-top: 20px; padding: 12px; border-left: 3px solid #ff9800; background: var(--color-bg-secondary); border-radius: 4px;">
+                            <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 8px;">✨ AI推奨（タップで編集）</div>
+                            <div style="display: grid; gap: 8px;">
+                                <div>
+                                    <div style="font-size: 11px; color: var(--color-text-tertiary); margin-bottom: 3px;">推奨カテゴリ</div>
+                                    <div style="font-size: 12px; background: var(--color-card-bg); padding: 6px 8px; border-radius: 3px;">
+                                        ${article.suggested_category} <span style="color: var(--color-text-tertiary);">(${(article.suggested_category_score * 100).toFixed(0)}%)</span>
+                                    </div>
+                                </div>
+                                ${article.suggested_tags && article.suggested_tags.length > 0 ? `
+                                <div>
+                                    <div style="font-size: 11px; color: var(--color-text-tertiary); margin-bottom: 3px;">推奨タグ</div>
+                                    <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                        ${article.suggested_tags.map(tag => `<span style="font-size: 11px; background: #667eea; color: white; padding: 3px 6px; border-radius: 3px;">${tag.name} <span style="opacity: 0.7;">(${(tag.score * 100).toFixed(0)}%)</span></span>`).join('')}
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ` : article.classification_status === 'processing' ? `
+                        <div style="margin-top: 20px; padding: 12px; border-left: 3px solid #2196f3; background: var(--color-bg-secondary); border-radius: 4px;">
+                            <div style="font-size: 11px; color: var(--color-text-secondary);">⏳ AI分類処理中...</div>
+                        </div>
+                        ` : article.classification_status === 'error' ? `
+                        <div style="margin-top: 20px; padding: 12px; border-left: 3px solid #f44336; background: var(--color-bg-secondary); border-radius: 4px;">
+                            <div style="font-size: 11px; color: var(--color-text-secondary);">⚠️ AI分類でエラーが発生しました</div>
+                        </div>
+                        ` : ''}
+
+                        <!-- 再評価スイッチ -->
+                        <div style="margin-top: 12px; padding: 10px; background: var(--color-bg-secondary); border-radius: 4px; display: flex; align-items: center; gap: 10px;">
+                            <div style="font-size: 11px; color: var(--color-text-secondary);">AI分類を再評価しますか？</div>
+                            <div style="display: flex; gap: 6px;">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="return false;">いいえ</button>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="reclassifyArticle(${article.id})">はい</button>
+                            </div>
+                        </div>
                     </div>
                 `;
 
                 document.getElementById('detailContent').innerHTML = detailHtml;
                 document.getElementById('detailLink').href = article.url;
 
-                // モーダルを表示
-                const modal = new bootstrap.Modal(document.getElementById('articleDetailModal'));
-                modal.show();
+                // モーダルを表示（既存インスタンスを再利用）
+                const modalEl = document.getElementById('articleDetailModal');
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                if (shouldShow && !modalEl.classList.contains('show')) {
+                    modal.show();
+                }
 
             } catch (error) {
                 alert('記事の詳細を読み込めませんでした: ' + error.message);
@@ -996,10 +1201,37 @@
             }
         }
 
+        // AI分類の再評価
+        async function reclassifyArticle(articleId) {
+            try {
+                const response = await fetch(`/api/articles/${articleId}/reclassify/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrftoken },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || '再評価に失敗しました');
+                }
+
+                // 反映のため詳細を再読み込み（表示は維持）
+                showArticleDetail(articleId, false);
+            } catch (error) {
+                alert('再評価に失敗しました: ' + error.message);
+            }
+        }
+
         // モーダルリセット
         document.getElementById('addArticleModal').addEventListener('hidden.bs.modal', function() {
             document.getElementById('articleUrl').value = '';
             document.getElementById('addArticleError').classList.add('d-none');
+        });
+
+        document.getElementById('articleDetailModal').addEventListener('hidden.bs.modal', function() {
+            document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('padding-right');
         });
     </script>
 </body>

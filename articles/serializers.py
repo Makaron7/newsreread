@@ -103,6 +103,12 @@ class ArticleSerializer(serializers.ModelSerializer):
 
     # ★追加：記事保存時に URL を受け取るためのフィールド (書き込み専用)
     url_input = serializers.URLField(write_only=True, required=True)
+    
+    # ★追加：AI自動分類の推奨値（読み取り専用）
+    suggested_category = serializers.CharField(read_only=True)
+    suggested_category_score = serializers.FloatField(read_only=True)
+    suggested_tags = serializers.JSONField(read_only=True)
+    classification_status = serializers.CharField(read_only=True)
 
     class Meta:
         model = Article
@@ -129,7 +135,12 @@ class ArticleSerializer(serializers.ModelSerializer):
             'tags',    
             'tag_ids', 
             'questions', 
-            'actions',   
+            'actions',
+            # ★ AI分類推奨値
+            'suggested_category',
+            'suggested_category_score',
+            'suggested_tags',
+            'classification_status',
         ]
 
     def __init__(self, *args, **kwargs):

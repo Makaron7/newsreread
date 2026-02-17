@@ -1,5 +1,6 @@
 # Standard Library
 from datetime import timedelta
+import threading
 # ▼▼▼ 追加：ウェブサイトにアクセスして解析するためのライブラリ ▼▼▼
 import requests
 from bs4 import BeautifulSoup
@@ -12,6 +13,7 @@ from django.contrib.auth.decorators import login_required # ★追加：ログ�
 from django.db.models import F, Count
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
+from django.conf import settings
 
 # Third-Party Libraries (DRF, Django-Filter)
 from rest_framework import viewsets, permissions, status, generics, filters # ★ filters を追加
@@ -202,7 +204,14 @@ class ArticleViewSet(viewsets.ModelViewSet):
                 article_instance.tags.set(tags_data)
             SCRAPE_RENEWAL_DAYS = 7
             if created_cache or cached_url_instance.needs_rescrape(days=SCRAPE_RENEWAL_DAYS):
-                fetch_article_metadata.delay(cached_url_instance.id)
+                # ★修正：開発環境では同期実行して即時反映
+                if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+                    fetch_article_metadata(cached_url_instance.id, article_id=article_instance.id)
+                else:
+                    fetch_article_metadata.delay(cached_url_instance.id, article_id=article_instance.id)
+
+                # 直後のレスポンスに反映するため再読込
+                cached_url_instance.refresh_from_db()
             new_serializer = self.get_serializer(article_instance)
             headers = self.get_success_headers(new_serializer.data)
             return Response(new_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -242,6 +251,88 @@ class ArticleViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         except Article.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'])
+    def reclassify(self, request, pk=None):
+        """
+        AI分類を再実行する
+        """
+        try:
+            article = self.get_object()
+            article.classification_status = 'processing'
+            article.classification_error = None
+            article.save(update_fields=['classification_status', 'classification_error'])
+
+            if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+                threading.Thread(
+                    target=fetch_article_metadata,
+                    args=(article.cached_url.id,),
+                    kwargs={'article_id': article.id},
+                    daemon=True
+                ).start()
+            else:
+                fetch_article_metadata.delay(article.cached_url.id, article_id=article.id)
+
+            serializer = self.get_serializer(article)
+            return Response(serializer.data)
+        except Article.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        except Exception as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def rescrape(self, request, pk=None):
+        """
+        タイトルなどのメタデータを再取得する
+        """
+        try:
+            article = self.get_object()
+            if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+                fetch_article_metadata(article.cached_url.id, article_id=article.id)
+            else:
+                fetch_article_metadata.delay(article.cached_url.id, article_id=article.id)
+
+            article.cached_url.refresh_from_db()
+            serializer = self.get_serializer(article)
+            return Response(serializer.data)
+        except Article.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        except Exception as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'])
+    def reclassify_pending(self, request):
+        """
+        AI分類が pending/error の記事を一括再評価する
+        """
+        articles = self.get_queryset().filter(
+            classification_status__in=['pending', 'error']
+        )
+
+        article_ids = list(articles.values_list('id', flat=True))
+
+        if not article_ids:
+            return Response({'count': 0})
+
+        def run_batch(ids):
+            for article_id in ids:
+                try:
+                    article = Article.objects.get(id=article_id)
+                except Article.DoesNotExist:
+                    continue
+                fetch_article_metadata(article.cached_url.id, article_id=article.id)
+
+        if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+            threading.Thread(target=run_batch, args=(article_ids,), daemon=True).start()
+        else:
+            for article_id in article_ids:
+                try:
+                    article = Article.objects.get(id=article_id)
+                except Article.DoesNotExist:
+                    continue
+                fetch_article_metadata.delay(article.cached_url.id, article_id=article_id)
+
+        return Response({'count': len(article_ids)})
 # ★ここから追加
     @action(detail=False, methods=['get'])
     def reminders(self, request):
