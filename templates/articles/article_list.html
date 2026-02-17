@@ -26,12 +26,13 @@
             display: flex;
             align-items: center;
             height: 64px;
+            gap: 10px;
         }
         
         .btn-menu {
             border: none;
             background: none;
-            margin-right: 15px;
+            margin-right: 0;
             padding: 8px;
             border-radius: 50%;
             color: #5f6368;
@@ -46,24 +47,41 @@
             font-family: 'Product Sans', sans-serif;
             font-weight: bold;
             transition: opacity 0.2s;
+            flex-grow: 1;
         }
         .app-title:hover {
             opacity: 0.8;
         }
 
+        /* 検索バー */
+        .search-bar {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: #f1f3f4;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 0 10px;
+        }
+        .search-bar input {
+            border: none;
+            background: none;
+            flex: 1;
+            outline: none;
+            font-size: 14px;
+        }
+
         /* ▼▼▼ サイドバーの設定 ▼▼▼ */
         .offcanvas {
-            /* ★変更：幅を320pxに設定（Google Keepや一般的なAndroidアプリの標準サイズ） */
-            /* これにより、かなり右側まで広がり「データ」部分までカバーされます */
             width: 320px !important; 
-            max-width: 90%; /* 画面が狭いスマホでも9割で止まるように */
+            max-width: 90%;
             border-right: none;
-            z-index: 1045; /* バックドロップ(1040)より上 */
+            z-index: 1045;
         }
 
         .sidebar-header {
             padding: 15px;
-            font-size: 22px; /* 幅が広がったので文字サイズも戻しました */
+            font-size: 22px;
             color: #008b8b;
             display: flex;
             align-items: center;
@@ -73,7 +91,7 @@
         
         .nav-link {
             color: #202124;
-            padding: 12px 24px; /* 幅が広がったので余白も少しゆったりに戻しました */
+            padding: 12px 24px;
             font-size: 15px;
             font-weight: 500;
             border-radius: 0 25px 25px 0;
@@ -106,12 +124,43 @@
             align-items: center;
         }
 
+        /* ツールバー */
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            padding: 10px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn-sort, .btn-filter, .btn-view {
+            border: 1px solid #dadce0;
+            background: #fff;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+        .btn-sort:hover, .btn-filter:hover, .btn-view:hover {
+            background: #f1f3f4;
+        }
+        .btn-sort.active, .btn-filter.active {
+            background: #e0f2f1;
+            color: #008b8b;
+            border-color: #008b8b;
+        }
+
         /* Masonryレイアウト */
         .masonry-container {
             column-count: 2;
             column-gap: 10px;
             padding: 10px;
-            margin-top: 10px;
+            margin-top: 0;
         }
 
         /* カードデザイン */
@@ -138,7 +187,22 @@
 
         .empty-state { text-align: center; margin-top: 100px; color: #5f6368; }
 
-        /* ▼▼▼ 追加ボタン（修正） ▼▼▼ */
+        /* 読み込み表示 */
+        .loading-spinner {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        .loading-spinner.active {
+            display: block;
+        }
+
+        /* 無限スクロール用のセンチネル */
+        #scroll-sentinel {
+            height: 20px;
+        }
+
+        /* FAB追加ボタン */
         .fab-add {
             position: fixed; 
             bottom: 24px; 
@@ -153,12 +217,9 @@
             justify-content: center;
             text-decoration: none; 
             transition: transform 0.2s;
-            border: none; /* ボタンのデフォルトborderを削除 */
-            outline: none; /* フォーカス時のoutlineを削除 */
-            cursor: pointer; /* カーソルをポインターに */
-
-            /* ★重要：z-indexを下げました（指定なし、または100程度） */
-            /* これにより、サイドバーが開いたときの暗い膜（z-index: 1040）の下になり、押せなくなります */
+            border: none;
+            outline: none;
+            cursor: pointer;
             z-index: 100; 
         }
         .fab-add:hover {
@@ -186,6 +247,25 @@
                 transform: translateY(0);
             }
         }
+
+        /* ステータスバッジ */
+        .status-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+            margin-top: 4px;
+            display: inline-block;
+        }
+        .status-read { background: #d4edda; color: #155724; }
+        .status-unread { background: #fff3cd; color: #856404; }
+        .status-read_later { background: #d1ecf1; color: #0c5460; }
+
+        @media (max-width: 640px) {
+            .masonry-container { column-count: 1; }
+            .toolbar { flex-direction: column; gap: 0; }
+            .search-bar { margin: 0; }
+        }
     </style>
 </head>
 <body>
@@ -194,19 +274,40 @@
         <button class="btn-menu" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
             <span class="material-icons">menu</span>
         </button>
-        <div class="app-title" style="cursor: pointer;" onclick="goHome()" title="ホームに戻る">
-            {% if request.GET.tag %}
-                ラベル
-            {% elif request.GET.status == 'read_later' %}
-                後で読む    
-            {% elif request.GET.status == 'archived' %}
-                アーカイブ
-            {% elif request.GET.status == 'trash' %}
-                ゴミ箱
-            {% else %}
-                Newsreread
-            {% endif %}
+        <div class="app-title" style="cursor: pointer;" onclick="goHome()" title="ホームに戻る">Newsreread</div>
+        <div class="search-bar">
+            <span class="material-icons" style="font-size: 20px; color: #5f6368;">search</span>
+            <input type="text" id="searchInput" placeholder="検索...">
         </div>
+    </div>
+
+    <!-- ツールバー -->
+    <div class="toolbar">
+        <button class="btn-sort" id="sortBtn" onclick="toggleSortMenu()">
+            <span class="material-icons" style="font-size: 18px;">sort</span>
+            ソート
+        </button>
+        <button class="btn-filter" id="filterBtn" onclick="toggleFilterMenu()">
+            <span class="material-icons" style="font-size: 18px;">filter_list</span>
+            フィルター
+        </button>
+    </div>
+
+    <!-- ソートメニュー（非表示） -->
+    <div id="sortMenu" style="display: none; position: fixed; top: 120px; left: 10px; background: white; border: 1px solid #e0e0e0; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 200; min-width: 180px;">
+        <button class="dropdown-item" onclick="setSortBy('saved_at')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">保存日の新しい順</button>
+        <button class="dropdown-item" onclick="setSortBy('-saved_at')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">保存日の古い順</button>
+        <button class="dropdown-item" onclick="setSortBy('title')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">タイトルで昇順</button>
+        <button class="dropdown-item" onclick="setSortBy('-priority')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">優先度の高い順</button>
+    </div>
+
+    <!-- フィルターメニュー（非表示） -->
+    <div id="filterMenu" style="display: none; position: fixed; top: 120px; left: 100px; background: white; border: 1px solid #e0e0e0; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 200; min-width: 160px;">
+        <button class="dropdown-item" onclick="setStatusFilter('all')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">すべて</button>
+        <button class="dropdown-item" onclick="setStatusFilter('unread')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">未読</button>
+        <button class="dropdown-item" onclick="setStatusFilter('read_later')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">後で読む</button>
+        <button class="dropdown-item" onclick="setStatusFilter('read')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">読了</button>
+        <button class="dropdown-item" onclick="setStatusFilter('favorite')" style="width: 100%; text-align: left; padding: 12px 16px; border: none; background: none; font-size: 13px;">お気に入り</button>
     </div>
 
     <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu">
@@ -215,17 +316,17 @@
         </div>
         <div class="offcanvas-body p-0">
             <nav class="nav flex-column">
-                <a class="nav-link {% if not request.GET.tag %}active{% endif %}" href="{% url 'home' %}">
+                <a class="nav-link active" href="#" onclick="setStatusFilter('all'); return false;">
                     <span class="material-icons">lightbulb</span>
                     すべてのメモ
                 </a>
 
-                <a class="nav-link" href="#">
+                <a class="nav-link" href="#" onclick="alert('準備中です'); return false;">
                     <span class="material-icons">notifications</span>
                     リマインダー
                 </a>
 
-                <a class="nav-link {% if request.GET.status == 'read_later' %}active{% endif %}" href="{% url 'home' %}?status=read_later">
+                <a class="nav-link" href="#" onclick="setStatusFilter('read_later'); return false;">
                     <span class="material-icons">watch_later</span>
                     後で読む
                 </a>
@@ -234,26 +335,27 @@
                     <span>ラベル</span>
                 </div>
 
-{% for tag in tags %}
-                <a class="nav-link {% if request.GET.tag == tag.id|stringformat:'s' %}active{% endif %}" 
-                   href="{% url 'home' %}?tag={{ tag.id }}">
-                    <span class="material-icons">label</span>
-                    {{ tag.name }}
-                </a>
-                {% endfor %}
+                <div id="tagsList" style="max-height: 200px; overflow-y: auto;">
+                    {% for tag in tags %}
+                    <a class="nav-link" href="#" data-tag-id="{{ tag.id }}" onclick="setTagFilterFromElement(this); return false;">
+                        <span class="material-icons">label</span>
+                        {{ tag.name }}
+                    </a>
+                    {% endfor %}
+                </div>
 
                 <div class="mt-2 border-top pt-2">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link" href="#" onclick="alert('準備中です'); return false;">
                         <span class="material-icons">edit</span>
                         ラベルの編集
                     </a>
                     
-                    <a class="nav-link {% if request.GET.status == 'archived' %}active{% endif %}" href="{% url 'home' %}?status=archived">
+                    <a class="nav-link" href="#" onclick="setStatusFilter('archived'); return false;">
                         <span class="material-icons">archive</span>
                         アーカイブ
                     </a>
                     
-                    <a class="nav-link {% if request.GET.status == 'trash' %}active{% endif %}" href="{% url 'home' %}?status=trash">
+                    <a class="nav-link" href="#" onclick="setStatusFilter('trash'); return false;">
                         <span class="material-icons">delete</span>
                         ゴミ箱
                     </a>
@@ -273,77 +375,18 @@
         </div>
     </div>
 
-    {% if articles %}
-        <div class="masonry-container">
-            {% for article in articles %}
-                <div class="note-card" data-article-id="{{ article.id }}">
-                    <div class="card-body">
-                        <div class="card-title">
-                            <a href="{{ article.cached_url.url }}" style="text-decoration: none; color: inherit;">
-                                {{ article.cached_url.title|default:article.cached_url.url|truncatechars:40 }}
-                            </a>
-                        </div>
-                        <div style="display: flex; align-items: center; margin-top: 6px; margin-bottom: 4px;">
-                            <img src="https://www.google.com/s2/favicons?domain={{ article.cached_url.url }}" alt="" style="width: 16px; height: 16px; margin-right: 6px;" onerror="this.style.display='none'">
-                            <span style="font-size: 12px; color: #5f6368;">
-                                {% if article.cached_url.site_name %}
-                                    {{ article.cached_url.site_name|truncatechars:25 }}
-                                {% else %}
-                                    {{ article.cached_url.url|cut:'https://'|cut:'http://'|cut:'www.'|truncatechars:25 }}
-                                {% endif %}
-                            </span>
-                        </div>
-                        <div class="card-text" style="font-size: 12px; color: #70757a;">
-                            {{ article.cached_url.url|truncatechars:35 }}
-                        </div>
-                        
-                        {% if article.tags.all %}
-                        <div style="margin-top: 8px;">
-                            {% for tag in article.tags.all %}
-                                <span style="font-size: 11px; background: #f1f3f4; padding: 2px 6px; border-radius: 4px; color: #3c4043; margin-right: 4px;">
-                                    {{ tag.name }}
-                                </span>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
+    <!-- 記事コンテナ -->
+    <div id="articlesContainer"></div>
 
-                        <div class="card-meta">
-                            <span>
-                                {% load tz %}
-                                {% now "Y" as current_year %}
-                                {% if article.saved_at|date:"Y" == current_year %}
-                                    {{ article.saved_at|date:"n/j" }}
-                                {% else %}
-                                    {{ article.saved_at|date:"Y/n/j" }}
-                                {% endif %}
-                            </span>
-                                
-                            <div style="display: flex; align-items: center;">
-                                
-                                <form action="{% url 'article_delete' article.id %}" method="post" style="margin: 0;" onsubmit="return confirm('ゴミ箱に移動しますか？');">
-                                    {% csrf_token %}
-                                    <button type="submit" style="border: none; background: none; color: #5f6368; padding: 5px; cursor: pointer; display: flex;">
-                                        <span class="material-icons" style="font-size: 18px;">delete</span>
-                                    </button>
-                                </form>
-
-                                <a href="{% url 'article_update' article.id %}" style="color: #5f6368; text-decoration: none; padding: 5px; display: flex;">
-                                    <span class="material-icons" style="font-size: 18px;">edit</span>
-                                </a>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
+    <!-- 読み込み中表示 -->
+    <div class="loading-spinner" id="loadingSpinner">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">読み込み中...</span>
         </div>
-    {% else %}
-        <div class="empty-state">
-            <span class="material-icons" style="font-size: 64px; opacity: 0.2;">label_off</span>
-            <p>記事が見つかりません</p>
-            <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm">すべてのメモを表示</a>
-        </div>
-    {% endif %}
+    </div>
+
+    <!-- 無限スクロール用のセンチネル -->
+    <div id="scroll-sentinel"></div>
 
     <!-- 記事追加ボタン -->
     <button type="button" class="fab-add" data-bs-toggle="modal" data-bs-target="#addArticleModal">
@@ -377,9 +420,196 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // CSRFトークンをmetaタグから取得
+        // グローバル状態
+        let currentPage = 1;
+        let isLoadingMore = false;
+        let hasNextPage = true;
+        let currentSortBy = '-saved_at';
+        let currentStatusFilter = 'all';
+        let currentTagFilter = null;
+        let searchQuery = '';
+
         const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        
+        const container = document.getElementById('articlesContainer');
+        const sentinel = document.getElementById('scroll-sentinel');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+
+        // ページを初期化
+        async function initPage() {
+            currentPage = 1;
+            hasNextPage = true;
+            container.innerHTML = '';
+            await loadMoreArticles();
+        }
+
+        // API から記事を読み込む
+        async function loadMoreArticles() {
+            if (isLoadingMore || !hasNextPage) return;
+            
+            isLoadingMore = true;
+            loadingSpinner.classList.add('active');
+            
+            try {
+                // フィルター条件を構築
+                let filters = '';
+                if (currentStatusFilter !== 'all') {
+                    if (currentStatusFilter === 'favorite') {
+                        filters += '&is_favorite=true';
+                    } else {
+                        filters += `&status=${currentStatusFilter}`;
+                    }
+                }
+                if (currentTagFilter) {
+                    filters += `&tags__id=${currentTagFilter}`;
+                }
+                if (searchQuery) {
+                    filters += `&search=${encodeURIComponent(searchQuery)}`;
+                }
+
+                const url = `/api/articles/?page=${currentPage}&ordering=${currentSortBy}${filters}`;
+                console.log('Fetching:', url);
+                
+                const response = await fetch(url, {
+                    headers: { 'X-CSRFToken': csrftoken },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) throw new Error('API error');
+                
+                const data = await response.json();
+                console.log('API Response:', data);
+
+                // 記事を追加
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach(article => addArticleCard(article));
+                    currentPage++;
+                    hasNextPage = !!data.next;
+
+                    // 記事数が少ない場合は自動で次ページを読み込む
+                    if (container.children.length < 6 && hasNextPage) {
+                        isLoadingMore = false;
+                        await loadMoreArticles();
+                        return;
+                    }
+                } else if (currentPage === 1) {
+                    // 最初のページで記事がない場合
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <span class="material-icons" style="font-size: 64px; opacity: 0.2;">label_off</span>
+                            <p>記事が見つかりません</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading articles:', error);
+                if (currentPage === 1) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <p style="color: red;">読み込みエラー: ${error.message}</p>
+                        </div>
+                    `;
+                }
+            } finally {
+                isLoadingMore = false;
+                loadingSpinner.classList.remove('active');
+            }
+        }
+
+        // 記事カードを追加
+        function addArticleCard(article) {
+            if (!container.querySelector('.masonry-container')) {
+                const masonryDiv = document.createElement('div');
+                masonryDiv.className = 'masonry-container';
+                container.appendChild(masonryDiv);
+            }
+
+            const masonry = container.querySelector('.masonry-container');
+            
+            // ステータスバッジ
+            let statusBadgeHtml = '';
+            if (article.status === 'read') {
+                statusBadgeHtml = '<span class="status-badge status-read">読了</span>';
+            } else if (article.status === 'read_later') {
+                statusBadgeHtml = '<span class="status-badge status-read_later">後で読む</span>';
+            }
+
+            // タグのHTML生成
+            let tagsHtml = '';
+            if (article.tags && article.tags.length > 0) {
+                tagsHtml = '<div style="margin-top: 8px;">';
+                article.tags.forEach(tag => {
+                    tagsHtml += `<span style="font-size: 11px; background: #f1f3f4; padding: 2px 6px; border-radius: 4px; color: #3c4043; margin-right: 4px;">${tag.name}</span>`;
+                });
+                tagsHtml += '</div>';
+            }
+
+            // URL、タイトル、ドメイン名抽出
+            const displayUrl = article.url || '';
+            const displayTitle = article.title || displayUrl;
+            const truncatedUrl = displayUrl.length > 35 ? displayUrl.substring(0, 35) + '...' : displayUrl;
+            
+            let domain = '';
+            try {
+                const urlObj = new URL(displayUrl);
+                domain = urlObj.hostname.replace('www.', '');
+            } catch (e) {
+                domain = displayUrl;
+            }
+            
+            const displayName = article.site_name || domain;
+            const truncatedDisplayName = displayName.length > 25 ? displayName.substring(0, 25) + '...' : displayName;
+
+            // 日付フォーマット
+            const date = new Date(article.saved_at);
+            const currentYear = new Date().getFullYear();
+            const savedYear = date.getFullYear();
+            let formattedDate;
+            if (savedYear === currentYear) {
+                formattedDate = `${date.getMonth() + 1}/${date.getDate()}`;
+            } else {
+                formattedDate = `${savedYear}/${date.getMonth() + 1}/${date.getDate()}`;
+            }
+
+            const cardHtml = `
+                <div class="note-card" style="animation: fadeIn 0.3s;" data-article-id="${article.id}">
+                    <div class="card-body">
+                        <div class="card-title">
+                            <a href="${displayUrl}" target="_blank" rel="noopener" style="text-decoration: none; color: inherit;">
+                                ${displayTitle}
+                            </a>
+                        </div>
+                        <div style="display: flex; align-items: center; margin-top: 6px; margin-bottom: 4px;">
+                            <img src="https://www.google.com/s2/favicons?domain=${domain}" alt="" style="width: 16px; height: 16px; margin-right: 6px;" onerror="this.style.display='none'">
+                            <span style="font-size: 12px; color: #5f6368;">${truncatedDisplayName}</span>
+                        </div>
+                        <div class="card-text" style="font-size: 12px; color: #70757a;">
+                            ${truncatedUrl}
+                        </div>
+                        ${statusBadgeHtml}
+                        ${tagsHtml}
+                        <div class="card-meta">
+                            <span>${formattedDate}</span>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <form action="/articles/${article.id}/edit/" method="get" style="margin: 0;">
+                                    <button type="submit" style="border: none; background: none; color: #5f6368; padding: 5px; cursor: pointer; display: flex;">
+                                        <span class="material-icons" style="font-size: 18px;">edit</span>
+                                    </button>
+                                </form>
+                                <form action="/articles/${article.id}/delete/" method="post" style="margin: 0;" onsubmit="return confirm('ゴミ箱に移動しますか？');">
+                                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrftoken}">
+                                    <button type="submit" style="border: none; background: none; color: #5f6368; padding: 5px; cursor: pointer; display: flex;">
+                                        <span class="material-icons" style="font-size: 18px;">delete</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            masonry.insertAdjacentHTML('beforeend', cardHtml);
+        }
+
         // 記事追加処理
         document.getElementById('submitArticle').addEventListener('click', async function() {
             const urlInput = document.getElementById('articleUrl').value.trim();
@@ -403,42 +633,29 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrftoken
                     },
-                    credentials: 'include', // Cookie を送信
-                    body: JSON.stringify({
-                        url_input: urlInput
-                    })
+                    credentials: 'include',
+                    body: JSON.stringify({ url_input: urlInput })
                 });
                 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    
-                    // エラーメッセージを構築
                     let errorMessage = '';
                     if (errorData.url_input) {
                         errorMessage = Array.isArray(errorData.url_input) ? errorData.url_input[0] : errorData.url_input;
                     } else if (errorData.detail) {
                         errorMessage = errorData.detail;
-                    } else if (errorData.error) {
-                        errorMessage = errorData.error;
                     } else {
-                        errorMessage = '記事の追加に失敗しました: ' + JSON.stringify(errorData);
+                        errorMessage = '記事の追加に失敗しました';
                     }
                     throw new Error(errorMessage);
                 }
                 
-                // 成功したら記事データを取得
-                const articleData = await response.json();
-                
-                // モーダルを閉じる
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addArticleModal'));
                 modal.hide();
                 document.getElementById('articleUrl').value = '';
                 
-                // 新しい記事カードを作成して追加
-                addArticleCard(articleData);
-                
-                // バックグラウンドでタイトルを取得するため、数秒後に更新
-                updateArticleCardAfterScraping(articleData.id);
+                // ページをリセット
+                await initPage();
                 
             } catch (error) {
                 errorDiv.textContent = error.message;
@@ -448,214 +665,87 @@
                 submitBtn.textContent = '追加';
             }
         });
-        
-        // 記事カードを動的に追加する関数
-        function addArticleCard(article) {
-            const container = document.querySelector('.masonry-container');
-            
-            // 空の状態メッセージがあれば削除
-            const emptyState = document.querySelector('.empty-state');
-            if (emptyState) {
-                emptyState.remove();
-            }
-            
-            // コンテナがなければ作成
-            let actualContainer = container;
-            if (!actualContainer) {
-                actualContainer = document.createElement('div');
-                actualContainer.className = 'masonry-container';
-                document.querySelector('.app-bar').insertAdjacentElement('afterend', actualContainer);
-            }
-            
-            // 日付のフォーマット（今年以外は西暦付き）
-            const date = new Date(article.saved_at);
-            const currentYear = new Date().getFullYear();
-            const savedYear = date.getFullYear();
-            let formattedDate;
-            if (savedYear === currentYear) {
-                formattedDate = `${date.getMonth() + 1}/${date.getDate()}`;
-            } else {
-                formattedDate = `${savedYear}/${date.getMonth() + 1}/${date.getDate()}`;
-            }
-            
-            // タグのHTML生成
-            let tagsHtml = '';
-            if (article.tags && article.tags.length > 0) {
-                tagsHtml = '<div style="margin-top: 8px;">';
-                article.tags.forEach(tag => {
-                    tagsHtml += `<span style="font-size: 11px; background: #f1f3f4; padding: 2px 6px; border-radius: 4px; color: #3c4043; margin-right: 4px;">${tag.name}</span>`;
-                });
-                tagsHtml += '</div>';
-            }
-            
-            // タイトルとURLの取得
-            const displayUrl = article.url || '';
-            const displayTitle = article.title || displayUrl;
-            const truncatedUrl = displayUrl.length > 35 ? displayUrl.substring(0, 35) + '...' : displayUrl;
-            
-            // サイト名またはドメイン名を取得
-            let displayName = '';
-            let domain = '';
-            try {
-                const urlObj = new URL(displayUrl);
-                domain = urlObj.hostname.replace('www.', '');
-            } catch (e) {
-                domain = displayUrl;
-            }
-            
-            // site_nameがあればそれを使用、なければドメイン名
-            if (article.site_name) {
-                displayName = article.site_name;
-            } else {
-                displayName = domain;
-            }
-            const truncatedDisplayName = displayName.length > 25 ? displayName.substring(0, 25) + '...' : displayName;
-            
-            // 新しい記事カードのHTML
-            const cardHtml = `
-                <div class="note-card" style="animation: fadeIn 0.3s;" data-article-id="${article.id}">
-                    <div class="card-body">
-                        <div class="card-title">
-                            <a href="${displayUrl}" style="text-decoration: none; color: inherit;">
-                                ${displayTitle}
-                            </a>
-                        </div>
-                        <div style="display: flex; align-items: center; margin-top: 6px; margin-bottom: 4px;">
-                            <img src="https://www.google.com/s2/favicons?domain=${domain}" alt="" style="width: 16px; height: 16px; margin-right: 6px;" onerror="this.style.display='none'">
-                            <span style="font-size: 12px; color: #5f6368;">${truncatedDisplayName}</span>
-                        </div>
-                        <div class="card-text" style="font-size: 12px; color: #70757a;">
-                            ${truncatedUrl}
-                        </div>
-                        ${tagsHtml}
-                        <div class="card-meta">
-                            <span>${formattedDate}</span>
-                            <div style="display: flex; align-items: center;">
-                                <form action="/articles/${article.id}/delete/" method="post" style="margin: 0;" onsubmit="return confirm('ゴミ箱に移動しますか？');">
-                                    <input type="hidden" name="csrfmiddlewaretoken" value="${csrftoken}">
-                                    <button type="submit" style="border: none; background: none; color: #5f6368; padding: 5px; cursor: pointer; display: flex;">
-                                        <span class="material-icons" style="font-size: 18px;">delete</span>
-                                    </button>
-                                </form>
-                                <a href="/articles/${article.id}/edit/" style="color: #5f6368; text-decoration: none; padding: 5px; display: flex;">
-                                    <span class="material-icons" style="font-size: 18px;">edit</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // カードを最初に挿入
-            actualContainer.insertAdjacentHTML('afterbegin', cardHtml);
+
+        // 検索機能
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            debounce(() => initPage(), 500);
+        });
+
+        // デバウンス関数
+        let debounceTimer;
+        function debounce(func, wait) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(func, wait);
         }
-        
-        // バックグラウンドでスクレイピングが完了したら記事カードを更新
-        async function updateArticleCardAfterScraping(articleId) {
-            // 最大30秒間、2秒ごとにチェック
-            const maxAttempts = 15;
-            let attempts = 0;
-            
-            const checkInterval = setInterval(async () => {
-                attempts++;
-                
-                try {
-                    const response = await fetch(`/api/articles/${articleId}/`, {
-                        headers: {
-                            'X-CSRFToken': csrftoken
-                        },
-                        credentials: 'include'
-                    });
-                    
-                    if (response.ok) {
-                        const updatedArticle = await response.json();
-                        
-                        // タイトルが取得されていたら更新
-                        if (updatedArticle.title && updatedArticle.title !== updatedArticle.url) {
-                            updateCardContent(articleId, updatedArticle);
-                            clearInterval(checkInterval);
-                        }
-                    }
-                    
-                    // 最大試行回数に達したら停止
-                    if (attempts >= maxAttempts) {
-                        clearInterval(checkInterval);
-                    }
-                } catch (error) {
-                    console.error('Error checking article update:', error);
-                    if (attempts >= maxAttempts) {
-                        clearInterval(checkInterval);
-                    }
-                }
-            }, 2000); // 2秒ごとにチェック
+
+        // ソート変更
+        function setSortBy(value) {
+            currentSortBy = value;
+            document.getElementById('sortMenu').style.display = 'none';
+            initPage();
         }
-        
+
+        // ステータスフィルター変更
+        function setStatusFilter(status) {
+            currentStatusFilter = status;
+            currentTagFilter = null;
+            document.getElementById('filterMenu').style.display = 'none';
+            initPage();
+        }
+
+        // タグフィルター変更
+        function setTagFilter(tagId) {
+            currentTagFilter = tagId;
+            currentStatusFilter = 'all';
+            initPage();
+        }
+
+        // タグフィルター変更（要素から）
+        function setTagFilterFromElement(element) {
+            const tagId = element.getAttribute('data-tag-id');
+            setTagFilter(tagId);
+        }
+
+        // メニュー表示切り替え
+        function toggleSortMenu() {
+            const menu = document.getElementById('sortMenu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleFilterMenu() {
+            const menu = document.getElementById('filterMenu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 外部クリックでメニュー閉じる
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#sortBtn') && !e.target.closest('#sortMenu')) {
+                document.getElementById('sortMenu').style.display = 'none';
+            }
+            if (!e.target.closest('#filterBtn') && !e.target.closest('#filterMenu')) {
+                document.getElementById('filterMenu').style.display = 'none';
+            }
+        });
+
+        // 無限スクロール（IntersectionObserver）
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !isLoadingMore && hasNextPage) {
+                loadMoreArticles();
+            }
+        }, { threshold: 0.5 });
+
+        observer.observe(sentinel);
+
         // ホームに戻る
         function goHome() {
             window.location.href = '{% url "home" %}';
         }
-        
-        // カードの内容を更新
-        function updateCardContent(articleId, article) {
-            const card = document.querySelector(`.note-card[data-article-id="${articleId}"]`);
-            
-            if (card) {
-                // タイトル、ドメイン、URLを更新
-                const titleElement = card.querySelector('.card-title a');
-                const domainContainer = card.querySelector('.card-body > div:nth-child(2)');
-                const urlElement = card.querySelector('.card-text');
-                
-                if (titleElement && article.title) {
-                    titleElement.textContent = article.title;
-                    titleElement.href = article.url || titleElement.href;
-                    // アニメーション効果で更新を強調
-                    titleElement.style.animation = 'none';
-                    setTimeout(() => {
-                        titleElement.style.animation = 'fadeIn 0.5s';
-                    }, 10);
-                }
-                
-                if (article.url) {
-                    // ドメイン名を抽出
-                    let domain = '';
-                    try {
-                        const urlObj = new URL(article.url);
-                        domain = urlObj.hostname.replace('www.', '');
-                    } catch (e) {
-                        domain = article.url;
-                    }
-                    
-                    // サイト名またはドメイン名を決定
-                    let displayName = '';
-                    if (article.site_name) {
-                        displayName = article.site_name;
-                    } else {
-                        displayName = domain;
-                    }
-                    const truncatedDisplayName = displayName.length > 25 ? displayName.substring(0, 25) + '...' : displayName;
-                    
-                    // ドメイン表示を更新
-                    if (domainContainer) {
-                        const domainImg = domainContainer.querySelector('img');
-                        const domainText = domainContainer.querySelector('span');
-                        if (domainImg) {
-                            domainImg.src = `https://www.google.com/s2/favicons?domain=${domain}`;
-                        }
-                        if (domainText) {
-                            domainText.textContent = truncatedDisplayName;
-                        }
-                    }
-                    
-                    // URL表示を更新
-                    if (urlElement) {
-                        const truncatedUrl = article.url.length > 35 ? article.url.substring(0, 35) + '...' : article.url;
-                        urlElement.textContent = truncatedUrl;
-                    }
-                }
-            }
-        }
-        
-        // モーダルが閉じられたときにフォームをリセット
+
+        // ページ読み込み時に記事を初期化
+        initPage();
+
+        // モーダルリセット
         document.getElementById('addArticleModal').addEventListener('hidden.bs.modal', function() {
             document.getElementById('articleUrl').value = '';
             document.getElementById('addArticleError').classList.add('d-none');

@@ -36,8 +36,9 @@ class ArticleFilter(django_filters.FilterSet):
         # Qオブジェクトを使って OR 検索を実現
         from django.db.models import Q
         return queryset.filter(
-            Q(title__icontains=value) |
-            Q(description__icontains=value) |
+            Q(cached_url__title__icontains=value) |
+            Q(cached_url__description__icontains=value) |
             Q(user_memo__icontains=value) |
-            Q(user_summary__icontains=value)
+            Q(user_summary__icontains=value) |
+            Q(cached_url__site_name__icontains=value)
         ).distinct() # 重複を除外

@@ -159,7 +159,10 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',  # ソート機能を追加
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 12,  # 無限スクロール用に1ページ12件（3カラム × 4行）
 }
 
 # ========== CELERY SETTINGS ==========

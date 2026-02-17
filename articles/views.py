@@ -14,7 +14,7 @@ from django.db.models.functions import TruncMonth
 from django.utils import timezone
 
 # Third-Party Libraries (DRF, Django-Filter)
-from rest_framework import viewsets, permissions, status, generics # ★ generics を追加
+from rest_framework import viewsets, permissions, status, generics, filters # ★ filters を追加
 from django.contrib.auth.models import User # ★ User を追加
 from rest_framework.decorators import action, api_view, permission_classes # ★ api_view, permission_classes を追加
 from rest_framework.permissions import IsAuthenticated # ★ IsAuthenticated を追加
@@ -163,11 +163,14 @@ class ArticleViewSet(viewsets.ModelViewSet):
     serializer_class = ArticleSerializer
     permission_classes = [permissions.IsAuthenticated]
     # ★フィルター機能を設定
-    filter_backends = [DjangoFilterBackend] # フィルターバックエンドを指定
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter] # 検索 + フィルター + ソート
+    search_fields = ['cached_url__title', 'cached_url__url', 'cached_url__description', 'user_memo', 'cached_url__site_name']
     filterset_class = ArticleFilter         # どのフィルター定義を使うか指定
+    ordering_fields = ['saved_at', 'title', 'priority', 'read_count', 'last_read_at']
+    ordering = ['-saved_at']  # デフォルトソート
 
     def get_queryset(self):
-        return self.request.user.articles.all().order_by('-saved_at')
+        return self.request.user.articles.all()
 
     def create(self, request, *args, **kwargs):
         """
