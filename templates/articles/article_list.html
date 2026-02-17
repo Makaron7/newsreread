@@ -194,7 +194,7 @@
         <button class="btn-menu" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
             <span class="material-icons">menu</span>
         </button>
-        <div class="app-title" style="cursor: pointer;" onclick="window.location.href='{% url 'home' %}';" title="ホームに戻る">
+        <div class="app-title" style="cursor: pointer;" onclick="goHome()" title="ホームに戻る">
             {% if request.GET.tag %}
                 ラベル
             {% elif request.GET.status == 'read_later' %}
@@ -588,6 +588,11 @@
                     }
                 }
             }, 2000); // 2秒ごとにチェック
+        }
+        
+        // ホームに戻る
+        function goHome() {
+            window.location.href = '{% url "home" %}';
         }
         
         // カードの内容を更新
