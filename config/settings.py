@@ -243,3 +243,15 @@ LOGIN_URL = '/accounts/login/' # ログイン画面の場所（ここを変更�
 
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+
+# 1. どのドメインからのアクセスも許可する
+ALLOWED_HOSTS = ['*'] 
+# ※本番では '*' ではなく具体的なドメインを指定しますが、開発中はこれでOKです
+
+# 2. ★重要：ngrok経由でのフォーム送信（CSRF）を許可する
+# これがないと「保存ボタン」を押したときにエラーになります
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.ngrok-free.app',
+    'https://*.ngrok-free.dev',  # ★これを追加！
+]
