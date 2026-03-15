@@ -89,7 +89,8 @@ ALLOWED_HOSTS = [
     '10.0.2.2',      # ★ Androidエミュレータからのアクセスを許可
     '127.0.0.1',   # 既存のlocalhost
     'localhost',     #
-    'proboycott-whiningly-tien.ngrok-free.dev',  # ngrokのドメイン（例）
+    'proboycott-whiningly-tien.ngrok-free.dev',
+    'bicolor-marcela-ringless.ngrok-free.dev'  # ngrokのドメイン（例）
 ]
 
 # CSRF設定は CORS SETTINGS セクション（下部）で一括定義
@@ -288,5 +289,6 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3000',
     'https://*.ngrok-free.app',
     'https://*.ngrok-free.dev',
-    'https://proboycott-whiningly-tien.ngrok-free.dev'
+    'https://proboycott-whiningly-tien.ngrok-free.dev',
+    'http://bicolor-marcela-ringless.ngrok-free.dev'
 ]
