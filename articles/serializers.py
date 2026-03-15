@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import Article, Tag, Question, ActionItem, CachedURL
+from .models import Article, Tag, Question, ActionItem, CachedURL, RSSSubscription
 
 # ★ここから追加
 class RegisterSerializer(serializers.ModelSerializer):
@@ -66,6 +66,13 @@ class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ['id', 'name']
+
+
+class RSSSubscriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RSSSubscription
+        fields = ['id', 'name', 'feed_url', 'is_active', 'last_fetched_at', 'created_at']
+        read_only_fields = ['last_fetched_at', 'created_at']
 
 
 class QuestionSerializer(serializers.ModelSerializer):
@@ -141,6 +148,7 @@ class ArticleSerializer(serializers.ModelSerializer):
             'suggested_category_score',
             'suggested_tags',
             'classification_status',
+            'is_from_rss',
         ]
 
     def __init__(self, *args, **kwargs):

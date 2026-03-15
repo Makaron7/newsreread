@@ -25,6 +25,14 @@ REST API（DRF）と、ログイン後に使うシンプルな HTML 画面の両
 - SQLite（デフォルト）
 
 
+Celery worker / beat の違い
+---------------------------
+- worker: キューに入ったタスクを実際に実行するプロセス
+- beat: 定期タスクをスケジュールし、キューに投入するプロセス
+
+定期RSS同期を動かすには、通常 `worker` と `beat` の両方が必要です。
+
+
 セットアップ（Windows / PowerShell）
 -----------------------------------
 1) 仮想環境の作成と有効化
@@ -61,13 +69,56 @@ REST API（DRF）と、ログイン後に使うシンプルな HTML 画面の両
 `.env.example` にある主な設定:
 
 - SECRET_KEY（必須）
+- DEBUG（任意、デフォルト True）
 - AI_CLASSIFICATION_ENGINE（任意）
   - lightweight（デフォルト）
   - transformers
+- AI_SBERT_MODEL（任意、`AI_CLASSIFICATION_ENGINE=transformers` のとき使用）
+	- デフォルト: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
+- AI_DEVICE（任意、`AI_CLASSIFICATION_ENGINE=transformers` のとき使用）
+	- `auto`（デフォルト）: `npu -> xpu -> cuda -> mps -> cpu` の順で自動選択
+	- 手動指定: `cpu` / `cuda` / `xpu` / `npu` / `mps`
+- AI_TRANSFORMERS_BACKEND（任意、`AI_CLASSIFICATION_ENGINE=transformers` のとき使用）
+	- `sentence_transformers`（デフォルト）: 既存経路
+	- `openvino_ir`: OpenVINO IR 経路
+	- `auto`: OpenVINO IR が使えれば優先、不可なら既存経路
+- AI_OPENVINO_IR_XML（任意）
+	- OpenVINO IR の `.xml` パス（`.bin` は同ディレクトリにある想定）
+- AI_OPENVINO_TOKENIZER_MODEL（任意）
+	- OpenVINO IR 推論時のトークナイザー名（HuggingFace形式）
+- AI_OPENVINO_DEVICE（任意）
+	- OpenVINO 実行デバイス（例: `CPU`, `AUTO`）
 
 補足:
 - `DEBUG=True` 時は Celery タスクが同期実行されるため、通常のローカル開発ではワーカー起動なしでも動作します。
 - 非同期運用する場合は Redis と Celery ワーカーを別途起動してください。
+- `AI_CLASSIFICATION_ENGINE=lightweight` の場合、SBERT/KeyBERT を使わず軽量分類のみ実行します（起動が安定しやすい）。
+- OpenVINO IR は**追加対応**です。既存の `sentence_transformers` 経路は維持され、設定で切り替えできます。
+
+
+非同期運用（worker / beat 起動手順）
+------------------------------------
+前提:
+- Redis が起動していること
+- `.env` で `DEBUG=False` にすること（`DEBUG=True` だと eager 実行が優先される）
+
+PowerShell でターミナルを3つ開いて実行:
+
+1) Django
+
+	python manage.py runserver
+
+2) Celery worker
+
+	.\venv\Scripts\python.exe -m celery -A config worker -l info
+
+3) Celery beat
+
+	.\venv\Scripts\python.exe -m celery -A config beat -l info
+
+補足（Redis）:
+- ローカルにRedisがある場合: `redis-server`
+- Dockerの場合: `docker run --name newsreread-redis -p 6379:6379 -d redis:7`
 
 
 ログイン画面 / 管理画面

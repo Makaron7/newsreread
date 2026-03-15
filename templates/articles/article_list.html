@@ -166,14 +166,23 @@
             align-items: center;
         }
 
-        /* ツールバー */
-        .toolbar {
+        .controls-row {
             display: flex;
-            gap: 10px;
             padding: 10px 15px;
             border-bottom: 1px solid var(--color-border);
             flex-wrap: wrap;
             align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        /* ツールバー */
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
         }
 
         .btn-sort, .btn-filter, .btn-view {
@@ -197,6 +206,116 @@
             color: #008b8b;
             border-color: #008b8b;
         }
+
+        .home-tabs {
+            display: flex;
+            gap: 8px;
+            padding: 0;
+            flex-wrap: wrap;
+        }
+
+        .home-tab {
+            border: 1px solid var(--color-border);
+            background: var(--color-card-bg);
+            color: var(--color-text-primary);
+            border-radius: 16px;
+            padding: 6px 12px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .home-tab.active {
+            background: rgba(0, 139, 139, 0.15);
+            color: #008b8b;
+            border-color: #008b8b;
+        }
+
+        .reread-genre-panel {
+            display: none;
+            padding: 8px 15px 6px 15px;
+            border-bottom: 1px solid var(--color-border);
+            background: var(--color-card-bg);
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .reread-genre-chip {
+            border: 1px solid var(--color-border);
+            background: var(--color-card-bg);
+            color: var(--color-text-primary);
+            border-radius: 14px;
+            padding: 4px 10px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .reread-genre-chip.active {
+            background: rgba(0, 139, 139, 0.15);
+            color: #008b8b;
+            border-color: #008b8b;
+        }
+
+        /* RSSパネル */
+        .rss-manage-panel {
+            display: none;
+            padding: 8px 15px 8px 15px;
+            border-bottom: 1px solid var(--color-border);
+            background: var(--color-card-bg);
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .rss-sub-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid var(--color-border);
+            background: var(--color-bg-secondary);
+            color: var(--color-text-primary);
+            border-radius: 14px;
+            padding: 4px 8px 4px 10px;
+            font-size: 12px;
+            cursor: default;
+        }
+        .rss-sub-chip .rss-chip-sync {
+            cursor: pointer;
+            font-size: 14px;
+            color: #008b8b;
+            line-height: 1;
+        }
+        .rss-sub-chip .rss-chip-del {
+            cursor: pointer;
+            font-size: 14px;
+            color: #999;
+            line-height: 1;
+        }
+        .rss-sub-chip .rss-chip-del:hover { color: #c00; }
+        .rss-sub-chip.active {
+            background: #008b8b;
+            color: #fff;
+            border-color: #008b8b;
+        }
+        .rss-sub-chip.active .rss-chip-sync { color: rgba(255,255,255,0.8); }
+        .rss-sub-chip.active .rss-chip-del { color: rgba(255,255,255,0.7); }
+        .rss-chip-name {
+            cursor: pointer;
+        }
+        .rss-chip-name:hover { text-decoration: underline; }
+        .rss-sub-chip:not(.active) .rss-chip-name:hover { color: #008b8b; }
+        .rss-add-btn {
+            border: 1px dashed var(--color-border);
+            background: none;
+            color: #008b8b;
+            border-radius: 14px;
+            padding: 4px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+        .rss-add-btn:hover { background: rgba(0,139,139,0.08); }
 
         /* Masonryレイアウト */
         .masonry-container {
@@ -373,7 +492,8 @@
 
         @media (max-width: 640px) {
             .masonry-container { column-count: 1; }
-            .toolbar { flex-direction: column; gap: 0; }
+            .controls-row { align-items: flex-start; }
+            .toolbar { width: 100%; justify-content: flex-end; }
             .search-bar { margin: 0; }
         }
     </style>
@@ -394,15 +514,37 @@
         </button>
     </div>
 
-    <!-- ツールバー -->
-    <div class="toolbar">
-        <button class="btn-sort" id="sortBtn" onclick="toggleSortMenu()">
-            <span class="material-icons" style="font-size: 18px;">sort</span>
-            ソート
-        </button>
-        <button class="btn-filter" id="filterBtn" onclick="toggleFilterMenu()">
-            <span class="material-icons" style="font-size: 18px;">filter_list</span>
-            フィルター
+    <div class="controls-row">
+        <div class="home-tabs" id="homeTabs">
+            <button class="home-tab active" data-tab="all" onclick="setHomeTab('all')">すべて</button>
+            <button class="home-tab" data-tab="rss" onclick="setHomeTab('rss')">RSS</button>
+            <button class="home-tab" data-tab="reread" onclick="setHomeTab('reread')">reread</button>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn-sort" id="sortBtn" onclick="toggleSortMenu()">
+                <span class="material-icons" style="font-size: 18px;">sort</span>
+                ソート
+            </button>
+            <button class="btn-filter" id="filterBtn" onclick="toggleFilterMenu()">
+                <span class="material-icons" style="font-size: 18px;">filter_list</span>
+                フィルター
+            </button>
+        </div>
+    </div>
+
+    <div class="reread-genre-panel" id="rereadGenrePanel">
+        <button class="reread-genre-chip active" data-reread-category="" onclick="setRereadCategoryFilter('')">すべて</button>
+        {% for category in categories %}
+        <button class="reread-genre-chip" data-reread-category="{{ category }}" onclick="setRereadCategoryFilter('{{ category|escapejs }}')">{{ category }}</button>
+        {% endfor %}
+    </div>
+
+    <!-- RSSパネル -->
+    <div class="rss-manage-panel" id="rssManagePanel">
+        <div id="rssSubChips" style="display:inline-flex;gap:8px;flex-wrap:wrap;align-items:center;"></div>
+        <button class="rss-add-btn" onclick="openAddRssModal()">
+            <span class="material-icons" style="font-size:14px;">add</span> 購読追加
         </button>
     </div>
 
@@ -541,6 +683,33 @@
         </div>
     </div>
 
+    <!-- RSS購読追加モーダル -->
+    <div class="modal fade" id="addRssModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">RSS購読を追加</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">名前</label>
+                        <input type="text" class="form-control" id="rssName" placeholder="例：ITmedia NEWS">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">フィードURL</label>
+                        <input type="url" class="form-control" id="rssFeedUrl" placeholder="https://example.com/feed.xml" required>
+                    </div>
+                    <div id="addRssError" class="alert alert-danger d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-primary" onclick="submitAddRss()">追加して同期</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 記事詳細モーダル -->
     <div class="modal fade" id="articleDetailModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -567,9 +736,14 @@
         let isLoadingMore = false;
         let hasNextPage = true;
         let currentSortBy = '-saved_at';
+        let currentHomeTab = 'all';
         let currentStatusFilter = 'all';
         let currentTagFilter = null;
+        let currentRereadCategory = '';
+        let currentRssSubscriptionFilter = null;
+        let rssSubscriptions = [];
         let searchQuery = '';
+        let fetchGeneration = 0;  // タブ切り替え時に古いfetch結果を無視するためのカウンター
         const autoReclassifyTried = new Set();
 
         const csrftoken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -579,6 +753,8 @@
 
         // ページを初期化
         async function initPage() {
+            fetchGeneration++;         // 古いfetchを無効化
+            isLoadingMore = false;     // ロック解除（古いfetchが詰まっていても強制リセット）
             currentPage = 1;
             hasNextPage = true;
             container.innerHTML = '';
@@ -591,19 +767,35 @@
             
             isLoadingMore = true;
             loadingSpinner.classList.add('active');
+            const myGeneration = fetchGeneration;   // このfetchが属するジェネレーション
             
             try {
                 // フィルター条件を構築
                 let filters = '';
-                if (currentStatusFilter !== 'all') {
+
+                if (currentHomeTab === 'rss') {
+                    filters += '&is_from_rss=true';
+                    if (currentRssSubscriptionFilter) {
+                        filters += `&rss_subscription=${currentRssSubscriptionFilter}`;
+                    }
+                } else if (currentHomeTab === 'reread') {
+                    filters += '&status=reread';
+                    if (currentRereadCategory) {
+                        filters += `&suggested_category=${encodeURIComponent(currentRereadCategory)}`;
+                    }
+                }
+
+                // rereadタブはステータス強制なのでフィルター不要、それ以外は適用
+                if (currentHomeTab !== 'reread' && currentStatusFilter !== 'all') {
                     if (currentStatusFilter === 'favorite') {
                         filters += '&is_favorite=true';
                     } else {
                         filters += `&status=${currentStatusFilter}`;
                     }
                 }
+                // タグフィルターはどのタブでも適用
                 if (currentTagFilter) {
-                    filters += `&tags__id=${currentTagFilter}`;
+                    filters += `&tag_id=${currentTagFilter}`;
                 }
                 if (searchQuery) {
                     filters += `&search=${encodeURIComponent(searchQuery)}`;
@@ -622,6 +814,11 @@
                 const data = await response.json();
                 console.log('API Response:', data);
 
+                // タブ切り替えが発生していた場合は結果を捨てる
+                if (myGeneration !== fetchGeneration) {
+                    return;
+                }
+
                 // 記事を追加
                 if (data.results && data.results.length > 0) {
                     data.results.forEach(article => {
@@ -639,14 +836,26 @@
                     }
                 } else if (currentPage === 1) {
                     // 最初のページで記事がない場合
+                    let emptyMessage = '記事が見つかりません';
+                    if (currentHomeTab === 'rss') {
+                        emptyMessage = 'RSS記事がありません（購読設定または同期を確認してください）';
+                    } else if (currentHomeTab === 'reread') {
+                        emptyMessage = currentRereadCategory
+                            ? `rereadに「${currentRereadCategory}」カテゴリの記事がありません`
+                            : 'rereadの記事がありません';
+                    }
+
                     container.innerHTML = `
                         <div class="empty-state">
                             <span class="material-icons" style="font-size: 64px; opacity: 0.2;">label_off</span>
-                            <p>記事が見つかりません</p>
+                            <p>${emptyMessage}</p>
                         </div>
                     `;
                 }
             } catch (error) {
+                if (myGeneration !== fetchGeneration) {
+                    return;
+                }
                 console.error('Error loading articles:', error);
                 if (currentPage === 1) {
                     container.innerHTML = `
@@ -656,8 +865,11 @@
                     `;
                 }
             } finally {
-                isLoadingMore = false;
-                loadingSpinner.classList.remove('active');
+                // このfetchが最新世代の場合のみロック解除（古いfetchが上書きしないよう）
+                if (myGeneration === fetchGeneration) {
+                    isLoadingMore = false;
+                    loadingSpinner.classList.remove('active');
+                }
             }
         }
 
@@ -961,18 +1173,198 @@
             initPage();
         }
 
-        // ステータスフィルター変更
+        // ステータスフィルター変更（タブはそのまま維持）
         function setStatusFilter(status) {
             currentStatusFilter = status;
             currentTagFilter = null;
+            currentRereadCategory = '';
+            // rereadタブでstatus変更→すべてタブへ切り替え（rereadはステータス強制のため）
+            if (currentHomeTab === 'reread') {
+                currentHomeTab = 'all';
+                updateHomeTabsActive();
+                updateRereadGenresVisibility();
+            }
             document.getElementById('filterMenu').style.display = 'none';
             initPage();
         }
 
-        // タグフィルター変更
+        // タグフィルター変更（サイドバーのラベルから）
         function setTagFilter(tagId) {
             currentTagFilter = tagId;
+            currentRereadCategory = '';
             currentStatusFilter = 'all';
+            // ジャンルタブ廃止済み：タグはどのタブでも適用、rereadなら'all'へ
+            if (currentHomeTab === 'reread' || currentHomeTab === 'rss') {
+                currentHomeTab = 'all';
+            }
+            updateHomeTabsActive();
+            updateRereadGenresVisibility();
+            updateRereadGenresActive();
+            initPage();
+        }
+
+        function setHomeTab(tab) {
+            currentHomeTab = tab;
+            // タブ切り替えでフィルターをすべてリセット
+            currentStatusFilter = 'all';
+            currentTagFilter = null;
+            currentRereadCategory = '';
+            currentRssSubscriptionFilter = null;
+
+            updateHomeTabsActive();
+            updateRereadGenresVisibility();
+            updateRereadGenresActive();
+            initPage();
+        }
+
+        function updateHomeTabsActive() {
+            document.querySelectorAll('#homeTabs .home-tab').forEach(tabBtn => {
+                if (tabBtn.getAttribute('data-tab') === currentHomeTab) {
+                    tabBtn.classList.add('active');
+                } else {
+                    tabBtn.classList.remove('active');
+                }
+            });
+        }
+
+        function updateRereadGenresVisibility() {
+            const panel = document.getElementById('rereadGenrePanel');
+            panel.style.display = currentHomeTab === 'reread' ? 'flex' : 'none';
+            const rssPanel = document.getElementById('rssManagePanel');
+            if (currentHomeTab === 'rss') {
+                rssPanel.style.display = 'flex';
+                loadRssSubscriptions();
+            } else {
+                rssPanel.style.display = 'none';
+            }
+        }
+
+        // ===== RSS購読管理 =====
+        async function loadRssSubscriptions() {
+            try {
+                const res = await fetch('/api/rss-subscriptions/', { credentials: 'include' });
+                if (!res.ok) throw new Error('取得失敗');
+                const data = await res.json();
+                rssSubscriptions = Array.isArray(data) ? data : (data.results || []);
+                renderRssChips(rssSubscriptions);
+            } catch (e) {
+                document.getElementById('rssSubChips').innerHTML =
+                    '<span style="font-size:12px;color:#c00;">購読情報の取得に失敗しました</span>';
+            }
+        }
+
+        function renderRssChips(subs) {
+            const el = document.getElementById('rssSubChips');
+            const allActive = !currentRssSubscriptionFilter ? ' active' : '';
+            const chips = [`<span class="rss-sub-chip${allActive}" onclick="setRssFilter(null)" style="cursor:pointer;">すべて</span>`];
+            if (subs.length === 0) {
+                chips.push('<span style="font-size:12px;color:var(--color-text-secondary);">購読中のフィードはありません</span>');
+            } else {
+                subs.forEach(s => {
+                    const active = (currentRssSubscriptionFilter == s.id) ? ' active' : '';
+                    chips.push(`
+                        <span class="rss-sub-chip${active}" title="${s.feed_url}">
+                            <span class="rss-chip-name" onclick="setRssFilter(${s.id})">${s.name}</span>
+                            <span class="material-icons rss-chip-sync" title="今すぐ同期" onclick="syncRss(${s.id})">sync</span>
+                            <span class="rss-chip-del" title="削除" onclick="deleteRss(${s.id}, '${s.name.replace(/'/g,"&#39;")}')">×</span>
+                        </span>`);
+                });
+            }
+            el.innerHTML = chips.join('');
+        }
+
+        function setRssFilter(id) {
+            currentRssSubscriptionFilter = id;
+            renderRssChips(rssSubscriptions);
+            initPage();
+        }
+
+        function openAddRssModal() {
+            document.getElementById('rssName').value = '';
+            document.getElementById('rssFeedUrl').value = '';
+            document.getElementById('addRssError').classList.add('d-none');
+            new bootstrap.Modal(document.getElementById('addRssModal')).show();
+        }
+
+        async function submitAddRss() {
+            const name = document.getElementById('rssName').value.trim();
+            const feedUrl = document.getElementById('rssFeedUrl').value.trim();
+            const errEl = document.getElementById('addRssError');
+            if (!feedUrl) { errEl.textContent = 'フィードURLは必須です'; errEl.classList.remove('d-none'); return; }
+            try {
+                const res = await fetch('/api/rss-subscriptions/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                    credentials: 'include',
+                    body: JSON.stringify({ name: name || feedUrl, feed_url: feedUrl })
+                });
+                if (!res.ok) {
+                    const d = await res.json();
+                    errEl.textContent = JSON.stringify(d);
+                    errEl.classList.remove('d-none');
+                    return;
+                }
+                const modalEl = document.getElementById('addRssModal');
+                const modal = bootstrap.Modal.getInstance(modalEl) || bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.hide();
+                loadRssSubscriptions();
+                initPage();
+            } catch (e) {
+                errEl.textContent = '追加に失敗しました: ' + e.message;
+                errEl.classList.remove('d-none');
+            }
+        }
+
+        async function deleteRss(id, name) {
+            if (!confirm(`「${name}」を削除しますか？\n（未読RSS記事も削除されます）`)) return;
+            try {
+                const res = await fetch(`/api/rss-subscriptions/${id}/`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': csrftoken },
+                    credentials: 'include'
+                });
+                if (res.ok || res.status === 204) {
+                    loadRssSubscriptions();
+                    initPage();
+                }
+            } catch (e) {
+                alert('削除に失敗しました');
+            }
+        }
+
+        async function syncRss(id) {
+            try {
+                await fetch(`/api/rss-subscriptions/${id}/sync_now/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrftoken },
+                    credentials: 'include'
+                });
+                initPage();
+            } catch (e) {
+                alert('同期に失敗しました');
+            }
+        }
+
+        function updateRereadGenresActive() {
+            document.querySelectorAll('#rereadGenrePanel .reread-genre-chip').forEach(chip => {
+                const chipCategory = chip.getAttribute('data-reread-category') || '';
+                const current = currentRereadCategory || '';
+                if (chipCategory === current) {
+                    chip.classList.add('active');
+                } else {
+                    chip.classList.remove('active');
+                }
+            });
+        }
+
+        function setRereadCategoryFilter(categoryName) {
+            currentHomeTab = 'reread';
+            currentStatusFilter = 'all';
+            currentTagFilter = null;
+            currentRereadCategory = categoryName || '';
+            updateHomeTabsActive();
+            updateRereadGenresVisibility();
+            updateRereadGenresActive();
             initPage();
         }
 
@@ -1076,6 +1468,9 @@
 
         // ページ読み込み時に記事を初期化
         initTheme();
+        updateHomeTabsActive();
+        updateRereadGenresVisibility();
+        updateRereadGenresActive();
         initPage();
 
         // ========== 記事詳細モーダル ==========

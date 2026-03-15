@@ -28,17 +28,34 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-fallback-key-for-development')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
 # 開発環境ではCeleryタスクを同期実行（ワーカーなしで動作）
 if DEBUG:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
 
-# ★AI分類エンジン設定
+# ★AI分類エンジン設定（手動選択）
 # 'lightweight' = キーワードマッチング版（軽量、高速）
 # 'transformers' = HuggingFace transformers 版（精度重視、GPU推奨）
+# ※無効な値は tasks.py 側で 'lightweight' にフォールバック
 AI_CLASSIFICATION_ENGINE = os.getenv('AI_CLASSIFICATION_ENGINE', 'lightweight')
+AI_SBERT_MODEL = os.getenv('AI_SBERT_MODEL', 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2')
+# transformers使用時のデバイス選択
+# auto: npu -> xpu -> cuda -> mps -> cpu の順で自動
+# 手動指定: cpu / cuda / xpu / npu / mps
+AI_DEVICE = os.getenv('AI_DEVICE', 'auto')
+
+# transformers経路の埋め込みバックエンド
+# sentence_transformers: 既存経路
+# openvino_ir: OpenVINO IR (.xml/.bin) 経路
+# auto: OpenVINO IR が設定・利用可能なら優先、不可なら既存経路へ
+AI_TRANSFORMERS_BACKEND = os.getenv('AI_TRANSFORMERS_BACKEND', 'sentence_transformers')
+
+# OpenVINO IR 追加対応（既存経路は維持）
+AI_OPENVINO_IR_XML = os.getenv('AI_OPENVINO_IR_XML', '')
+AI_OPENVINO_TOKENIZER_MODEL = os.getenv('AI_OPENVINO_TOKENIZER_MODEL', AI_SBERT_MODEL)
+AI_OPENVINO_DEVICE = os.getenv('AI_OPENVINO_DEVICE', 'CPU')
 
 # ★AI カテゴリ候補（SBERT 版で使用）
 AI_CATEGORY_CANDIDATES = [

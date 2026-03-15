@@ -8,12 +8,24 @@ class CachedURL(models.Model):
     """
     スクレイピング結果をURL単位でキャッシュするモデル
     """
+    FETCH_STATUS_CHOICES = [
+        ('pending', '未取得'),
+        ('success', '取得成功'),
+        ('failed', '取得失敗'),
+        ('not_found', '404/410'),
+    ]
+
     url = models.URLField(max_length=2000, unique=True, db_index=True)
     title = models.CharField(max_length=200, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     image_url = models.URLField(max_length=2000, blank=True, null=True)
     site_name = models.CharField(max_length=100, blank=True, null=True)  # サイト名を追加
     last_scraped_at = models.DateTimeField(auto_now_add=True)
+    fetch_status = models.CharField(max_length=20, choices=FETCH_STATUS_CHOICES, default='pending')
+    failure_count = models.PositiveIntegerField(default=0)
+    last_failure_at = models.DateTimeField(blank=True, null=True)
+    next_retry_at = models.DateTimeField(blank=True, null=True)
+    last_http_status = models.PositiveSmallIntegerField(blank=True, null=True)
 
     def __str__(self):
         return self.url
@@ -38,6 +50,25 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class RSSSubscription(models.Model):
+    """
+    ユーザーごとのRSS購読設定
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='rss_subscriptions')
+    name = models.CharField(max_length=100)
+    feed_url = models.URLField(max_length=2000)
+    is_active = models.BooleanField(default=True)
+    last_fetched_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'feed_url')
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.user.username})"
 
 class Article(models.Model):
     """
@@ -70,6 +101,17 @@ class Article(models.Model):
 
     # スクレイピング結果キャッシュとの関連
     cached_url = models.ForeignKey(CachedURL, on_delete=models.CASCADE, related_name='articles')
+
+    # RSS由来の記事を識別
+    rss_subscription = models.ForeignKey(
+        RSSSubscription,
+        on_delete=models.SET_NULL,
+        related_name='articles',
+        blank=True,
+        null=True
+    )
+    is_from_rss = models.BooleanField(default=False)
+    rss_guid = models.CharField(max_length=500, blank=True, null=True, db_index=True)
 
     # 読了ステータス (機能4)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='unread')

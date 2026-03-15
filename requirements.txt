@@ -34,6 +34,7 @@ vine==5.1.0
 wcwidth==0.2.14
 sentence-transformers==5.2.2
 keybert==0.7.0
-fugashi==1.3.0
+fugashi
 ipadic==1.0.0
-scikit-learn
+scikit-learn==1.7.2
+feedparser==6.0.11

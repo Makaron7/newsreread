@@ -25,13 +25,14 @@ from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 
 # Local Application Imports
-from .models import Article, Tag, Question, ActionItem, CachedURL
+from .models import Article, Tag, Question, ActionItem, CachedURL, RSSSubscription
 from .serializers import (
     RegisterSerializer, # ★インポート追加
     UserSerializer, # ★ユーザー情報用シリアライザをインポート
     ArticleSerializer, 
     ArticleSimpleSerializer,
     TagSerializer, 
+    RSSSubscriptionSerializer,
     QuestionSerializer, 
     ActionItemSerializer
 )
@@ -60,7 +61,7 @@ class UserDetailView(generics.RetrieveAPIView):
         return self.request.user
 # ★ここまで追加
 from .filters import ArticleFilter
-from .tasks import fetch_article_metadata, classify_article
+from .tasks import fetch_article_metadata, classify_article, sync_single_rss_feed, retry_pending_metadata
 
 # ↓ ここから ViewSet の定義が始まります
 
@@ -82,6 +83,41 @@ class TagViewSet(viewsets.ModelViewSet):
         タグ作成時に、自動でログインユーザーを紐づける
         """
         serializer.save(user=self.request.user)
+
+
+class RSSSubscriptionViewSet(viewsets.ModelViewSet):
+    """
+    RSS購読設定の取得・作成・更新・削除
+    """
+    serializer_class = RSSSubscriptionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return RSSSubscription.objects.filter(user=self.request.user).order_by('name')
+
+    def perform_create(self, serializer):
+        subscription = serializer.save(user=self.request.user)
+        if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+            sync_single_rss_feed(subscription.id)
+        else:
+            sync_single_rss_feed.delay(subscription.id)
+
+    @action(detail=True, methods=['post'])
+    def sync_now(self, request, pk=None):
+        subscription = self.get_object()
+        if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+            sync_single_rss_feed(subscription.id)
+        else:
+            sync_single_rss_feed.delay(subscription.id)
+        return Response({'detail': 'RSS同期を開始しました'})
+
+    @action(detail=False, methods=['post'])
+    def retry_metadata(self, request):
+        if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+            retry_pending_metadata()
+        else:
+            retry_pending_metadata.delay()
+        return Response({'detail': 'メタデータ再取得を開始しました'})
 # ★ここまで追加
 
 class StatisticsView(APIView):
@@ -405,10 +441,19 @@ def article_list(request):
 
     # 3. サイドバーに表示するために、自分のタグ一覧を取得
     tags = Tag.objects.filter(user=request.user)
+    user_categories = set(
+        Article.objects.filter(user=request.user)
+        .exclude(suggested_category__isnull=True)
+        .exclude(suggested_category='')
+        .values_list('suggested_category', flat=True)
+    )
+    configured_categories = set(getattr(settings, 'AI_CATEGORY_CANDIDATES', []))
+    categories = sorted(user_categories.union(configured_categories))
 
     context = {
         'articles': articles,
         'tags': tags, # テンプレートにタグリストを渡す
+        'categories': categories,
     }
     # 以前作成した templates/articles/article_list.html を表示する
     return render(request, 'articles/article_list.html', context)
