@@ -31,3 +31,7 @@ Thumbs.db
 # IDE/エディタ設定 (任意)
 .vscode/
 .idea/
+
+# 作業引継ぎドキュメント（ローカル運用）
+handover.md
+work_instruction.md
