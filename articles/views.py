@@ -379,9 +379,21 @@ class ArticleViewSet(viewsets.ModelViewSet):
         Next.js・モバイルのShare機能などから呼ぶ用。
         ArticleViewSet.create() と同じ fetch_article_metadata タスクを使う。
         """
-        url = request.data.get('url')
+        # 互換性のため、複数のキー名を許可する
+        url = (
+            request.data.get('url')
+            or request.data.get('url_input')
+            or request.data.get('link')
+            or request.data.get('shared_url')
+            or request.query_params.get('url')
+        )
+        if isinstance(url, str):
+            url = url.strip()
         if not url:
-            return Response({'error': 'url は必須です'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'url は必須です', 'hint': 'url または url_input を指定してください'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         # URL フォーマット検証（不正な値・内部IPなどを早期排除）
         from django.core.validators import URLValidator
