@@ -91,11 +91,7 @@ ALLOWED_HOSTS = [
     'localhost',     #
 ]
 
-# CSRF設定
-CSRF_TRUSTED_ORIGINS = [
-    'http://127.0.0.1:8000',
-    'http://localhost:8000',
-]
+# CSRF設定は CORS SETTINGS セクション（下部）で一括定義
 
 
 # Application definition
@@ -112,6 +108,7 @@ INSTALLED_APPS = [
     # 追加したライブラリ
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',  # JWTリフレッシュトークンのブラックリスト管理
     
     # 追加したアプリ
     'articles',
@@ -220,6 +217,21 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 12,  # 無限スクロール用に1ページ12件（3カラム × 4行）
 }
 
+# ========== SIMPLE JWT SETTINGS ==========
+from datetime import timedelta
+SIMPLE_JWT = {
+    # アクセストークン有効期限（短めに設定してリスクを限定）
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    # リフレッシュトークン有効期限
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    # リフレッシュ時に新しいリフレッシュトークンを発行する（ローテーション）
+    'ROTATE_REFRESH_TOKENS': True,
+    # 使用済みリフレッシュトークンをブラックリストに登録
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
 # ========== CELERY SETTINGS ==========
 # タスク（処理の依頼）を保存する場所 (ブローカー) としてRedisを指定
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
@@ -234,15 +246,17 @@ CELERY_TIMEZONE = 'Asia/Tokyo' # タイムゾーンを日本に設定
 
 # ========== CORS SETTINGS ==========
 
-# True にすると、すべてのドメインからのアクセスを許可 (開発中は便利)
-CORS_ALLOW_ALL_ORIGINS = True
+# 開発中 (DEBUG=True) はすべてのオリジンを許可、本番では環境変数 CORS_ALLOWED_ORIGINS_LIST で制限
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    _cors_origins_env = os.getenv('CORS_ALLOWED_ORIGINS_LIST', '')
+    CORS_ALLOWED_ORIGINS = [
+        o.strip() for o in _cors_origins_env.split(',') if o.strip()
+    ]
 
-# (もし本番環境などでドメインを制限したい場合は、以下のように設定します)
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:3000",      # 開発中のReactアプリなど
-#     "http://127.0.0.1:3000",      #
-#     "https://your-app-domain.com", # 本番のドメイン
-# ]
+
 
 # 許可するHTTPヘッダー (Authorization ヘッダーを許可)
 CORS_ALLOW_HEADERS = [
@@ -262,13 +276,15 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 
-# 1. どのドメインからのアクセスも許可する
-ALLOWED_HOSTS = ['*'] 
-# ※本番では '*' ではなく具体的なドメインを指定しますが、開発中はこれでOKです
+# ngrok / 本番ホストは環境変数 EXTRA_ALLOWED_HOSTS で追加できる
+_extra_hosts = [h.strip() for h in os.getenv('EXTRA_ALLOWED_HOSTS', '').split(',') if h.strip()]
+ALLOWED_HOSTS += _extra_hosts
 
-# 2. ★重要：ngrok経由でのフォーム送信（CSRF）を許可する
-# これがないと「保存ボタン」を押したときにエラーになります
+# ngrok / HTTPS オリジンを CSRF_TRUSTED_ORIGINS に追加
 CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    'http://localhost:3000',
     'https://*.ngrok-free.app',
-    'https://*.ngrok-free.dev',  # ★これを追加！
+    'https://*.ngrok-free.dev',
 ]

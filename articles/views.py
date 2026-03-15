@@ -1,6 +1,5 @@
 # Standard Library
 from datetime import timedelta
-import threading
 # ▼▼▼ 追加：ウェブサイトにアクセスして解析するためのライブラリ ▼▼▼
 import requests
 from bs4 import BeautifulSoup
@@ -172,28 +171,32 @@ class StatisticsView(APIView):
 class QuestionViewSet(viewsets.ModelViewSet):
     """
     「問い」のAPIビュー
+    ?article=<id> で記事を絞り込める (GET /api/questions/?article=1)
     """
     serializer_class = QuestionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """
-        ログインユーザーの記事に紐づく「問い」のみを返す
-        """
-        return Question.objects.filter(article__user=self.request.user)
+        qs = Question.objects.filter(article__user=self.request.user)
+        article_id = self.request.query_params.get('article')
+        if article_id is not None:
+            qs = qs.filter(article_id=article_id)
+        return qs
 
 class ActionItemViewSet(viewsets.ModelViewSet):
     """
     「アクション」のAPIビュー
+    ?article=<id> で記事を絞り込める (GET /api/actions/?article=1)
     """
     serializer_class = ActionItemSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """
-        ログインユーザーの記事に紐づく「アクション」のみを返す
-        """
-        return ActionItem.objects.filter(article__user=self.request.user)
+        qs = ActionItem.objects.filter(article__user=self.request.user)
+        article_id = self.request.query_params.get('article')
+        if article_id is not None:
+            qs = qs.filter(article_id=article_id)
+        return qs
 
 
 REPETITION_INTERVALS = [1, 3, 7, 14, 30, 60, 90]  # 0->1日後, 1->3日後, 2->7日後, ...
@@ -300,11 +303,8 @@ class ArticleViewSet(viewsets.ModelViewSet):
             article.save(update_fields=['classification_status', 'classification_error'])
 
             if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
-                threading.Thread(
-                    target=classify_article,
-                    args=(article.id,),
-                    daemon=True
-                ).start()
+                # 開発時は同期実行で確実に完了させる（daemonスレッド中断を回避）
+                classify_article(article.id)
             else:
                 classify_article.delay(article.id)
 
@@ -338,10 +338,10 @@ class ArticleViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def reclassify_pending(self, request):
         """
-        AI分類が pending/error の記事を一括再評価する
+        AI分類が pending/error/processing の記事を一括再評価する
         """
         articles = self.get_queryset().filter(
-            classification_status__in=['pending', 'error']
+            classification_status__in=['pending', 'error', 'processing']
         )
 
         # タグが空で推奨タグも空の completed も対象に追加（SQLite回避のためPython側で判定）
@@ -363,17 +363,64 @@ class ArticleViewSet(viewsets.ModelViewSet):
         if not article_ids:
             return Response({'count': 0})
 
-        def run_batch(ids):
-            for article_id in ids:
-                classify_article(article_id)
-
         if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
-            threading.Thread(target=run_batch, args=(article_ids,), daemon=True).start()
+            for article_id in article_ids:
+                classify_article(article_id)
         else:
             for article_id in article_ids:
                 classify_article.delay(article_id)
 
         return Response({'count': len(article_ids)})
+
+    @action(detail=False, methods=['post'])
+    def quick_save(self, request):
+        """
+        URLだけ送ってクイック保存する (POST /api/articles/quick_save/)
+        Next.js・モバイルのShare機能などから呼ぶ用。
+        ArticleViewSet.create() と同じ fetch_article_metadata タスクを使う。
+        """
+        url = request.data.get('url')
+        if not url:
+            return Response({'error': 'url は必須です'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # URL フォーマット検証（不正な値・内部IPなどを早期排除）
+        from django.core.validators import URLValidator
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        validator = URLValidator(schemes=['http', 'https'])
+        try:
+            validator(url)
+        except DjangoValidationError:
+            return Response({'error': '有効なURLを指定してください'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        cached_url_instance, created_cache = CachedURL.objects.get_or_create(url=url)
+
+        existing_article = Article.objects.filter(
+            user=user,
+            cached_url=cached_url_instance
+        ).first()
+        if existing_article:
+            serializer = self.get_serializer(existing_article)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        article_instance = Article.objects.create(
+            user=user,
+            cached_url=cached_url_instance,
+            status='read_later',
+            priority='medium',
+        )
+
+        SCRAPE_RENEWAL_DAYS = 7
+        if created_cache or cached_url_instance.needs_rescrape(days=SCRAPE_RENEWAL_DAYS):
+            if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+                fetch_article_metadata(cached_url_instance.id, article_id=article_instance.id)
+            else:
+                fetch_article_metadata.delay(cached_url_instance.id, article_id=article_instance.id)
+            cached_url_instance.refresh_from_db()
+
+        serializer = self.get_serializer(article_instance)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 # ★ここから追加
     @action(detail=False, methods=['get'])
     def reminders(self, request):
@@ -482,110 +529,60 @@ def article_update(request, pk):
         'article': article
     })
 
+@login_required
 def article_share(request):
     """
     共有ボタンから呼ばれる簡易保存画面
+    タイトル取得は fetch_article_metadata タスク経由（SSRF防止）
     """
-    # URLパラメータから初期値を取得
     initial_url = request.GET.get('url', '')
     
     if request.method == 'POST':
         form = ArticleShareForm(request.POST)
         if form.is_valid():
-            # フォームからデータを取り出す
             url = form.cleaned_data['url']
             status = form.cleaned_data['status']
             priority = form.cleaned_data['priority']
             next_reminder_date = form.cleaned_data['next_reminder_date']
 
-            # URLからCachedURLを取得または作成
-            cached_url, created = CachedURL.objects.get_or_create(url=url)
-            
-            # ▼▼▼ 追加：タイトルが空なら、Webから取得して保存する ▼▼▼
-            if not cached_url.title:
-                try:
-                    # サイトにアクセス（5秒でタイムアウト、User-Agentを設定して拒否を防ぐ）
-                    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-                    response = requests.get(url, headers=headers, timeout=5)
-                    response.encoding = response.apparent_encoding # 文字化け対策
-                    
-                    # HTMLからタイトルを抜き出す
-                    soup = BeautifulSoup(response.content, 'html.parser')
-                    if soup.title and soup.title.string:
-                        cached_url.title = soup.title.string
-                        cached_url.save()
-                        
-                except Exception as e:
-                    print(f"タイトルの取得に失敗しました: {e}")
-            # ▲▲▲ 追加ここまで ▲▲▲
-
-            # 記事を作成（重複チェックなどは必要に応じて追加）
-            Article.objects.create(
+            cached_url, created_cache = CachedURL.objects.get_or_create(url=url)
+            article, _ = Article.objects.get_or_create(
                 user=request.user,
                 cached_url=cached_url,
-                status=status,
-                priority=priority,
-                next_reminder_date=next_reminder_date
+                defaults={
+                    'status': status,
+                    'priority': priority,
+                    'next_reminder_date': next_reminder_date,
+                }
             )
-            
+
+            # タイトル取得は必ずタスク経由（直接 requests.get は SSRF になるため禁止）
+            SCRAPE_RENEWAL_DAYS = 7
+            if created_cache or cached_url.needs_rescrape(days=SCRAPE_RENEWAL_DAYS):
+                if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+                    fetch_article_metadata(cached_url.id, article_id=article.id)
+                else:
+                    fetch_article_metadata.delay(cached_url.id, article_id=article.id)
+
             return redirect('home')
     else:
-        # 初期表示：URLだけ埋め込んだフォームを作る
         form = ArticleShareForm(initial={'url': initial_url})
 
     return render(request, 'articles/article_share.html', {'form': form})
 
+@login_required
 def article_delete(request, pk):
     """
     記事をゴミ箱に移動する（ソフトデリート）
+    POST のみ受け付ける（GETでの誤削除防止 / CSRF二重防衛）
     """
-    article = get_object_or_404(Article, pk=pk, user=request.user)
-    
-    if request.method == 'POST':
-        # ★変更：完全に削除(delete)するのではなく、ステータスをゴミ箱に変える
-        article.status = 'trash'
-        article.save()
+    if request.method != 'POST':
         return redirect('home')
-        
+
+    article = get_object_or_404(Article, pk=pk, user=request.user)
+    article.status = 'trash'
+    article.save(update_fields=['status'])
     return redirect('home')
 
-# ▼▼▼ 今回追加するJSON保存用のAPI ▼▼▼
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def api_share_json(request):
-    """
-    Androidアプリの裏側からJSONで送られてくるURLを受け取って保存するAPI
-    """
-    # 1. 送られてきたJSONデータ（小包）から "url" を取り出す
-    url = request.data.get('url')
-    if not url:
-        return Response({'error': 'URLがありません'}, status=400)
-
-    # 2. URLからCachedURLを取得または作成
-    cached_url, created = CachedURL.objects.get_or_create(url=url)
-    
-    # 3. タイトルがなければ取得する（前回作った仕組みを再利用）
-    if not cached_url.title:
-        try:
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-            response = requests.get(url, headers=headers, timeout=5)
-            response.encoding = response.apparent_encoding
-            soup = BeautifulSoup(response.content, 'html.parser')
-            if soup.title and soup.title.string:
-                cached_url.title = soup.title.string
-                cached_url.save()
-        except Exception as e:
-            print(f"タイトルの取得に失敗しました: {e}")
-
-    # 4. 記事を作成（お友達のアドバイス通り、一旦「後で読むストック(unread)」として保存）
-    Article.objects.get_or_create(
-        user=request.user,
-        cached_url=cached_url,
-        defaults={
-            'status': 'read_later', 
-            'priority': 'medium'
-        }
-    )
-    
-    # 5. アプリ側に「成功したよ！」と返事（JSON）を返す
-    return Response({'message': '保存しました'})
+# api_share_json は ArticleViewSet.quick_save に統合済み（下記を参照）
+# SSRFリスクがあった直接spcrapeは廃止し、fetch_article_metadata タスクに委譲する形に変更

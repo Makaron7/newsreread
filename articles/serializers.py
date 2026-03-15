@@ -79,14 +79,12 @@ class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = ['id', 'article', 'text', 'created_at']
-        # 記事の作成・更新時に article を指定できるようにする
-        extra_kwargs = {'article': {'write_only': True}}
+        # article は読み取り（レスポンスで article_id が確認できる）＆書き込み両対応
 
 class ActionItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = ActionItem
         fields = ['id', 'article', 'text', 'is_done', 'created_at']
-        extra_kwargs = {'article': {'write_only': True}}
 # ★ここまで追加
 
 class ArticleSerializer(serializers.ModelSerializer):

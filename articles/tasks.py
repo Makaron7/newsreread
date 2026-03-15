@@ -1,6 +1,9 @@
+import warnings
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 import xml.etree.ElementTree as ET
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 from urllib.parse import urlparse
 from datetime import timedelta
 import threading
@@ -534,13 +537,30 @@ def classify_article(article_id):
         # テキストを組み立て
         title = article.cached_url.title or ""
         description = article.cached_url.description or ""
-        combined_text = f"{title} {description}"
+        combined_text = f"{title} {description}".strip()
 
-        # テキストが空の場合はスキップ
+        # タイトル/概要が取れない記事（404等）は URL/サイト名を補助テキストとして利用
+        if not combined_text:
+            fallback_parts = [
+                article.cached_url.site_name or "",
+                article.cached_url.url or "",
+            ]
+            combined_text = " ".join(part for part in fallback_parts if part).strip()
+
+        # それでも空なら既定カテゴリで完了扱いにして再試行ループを避ける
         if not combined_text.strip():
-            article.classification_status = 'error'
-            article.classification_error = "テキストが空"
-            article.save(update_fields=['classification_status', 'classification_error'])
+            article.suggested_category = 'その他・ポエム'
+            article.suggested_category_score = 0.0
+            article.suggested_tags = []
+            article.classification_status = 'completed'
+            article.classification_error = "分類元テキストなし（タイトル/概要未取得）"
+            article.save(update_fields=[
+                'suggested_category',
+                'suggested_category_score',
+                'suggested_tags',
+                'classification_status',
+                'classification_error',
+            ])
             return
 
         engine_raw = str(getattr(settings, 'AI_CLASSIFICATION_ENGINE', 'lightweight')).strip().lower()
@@ -993,6 +1013,13 @@ def sync_single_rss_feed(subscription_id):
                 'rss_guid': guid,
             }
         )
+
+        # RSSで取り込んだ新規記事は自動分類を開始
+        if created:
+            if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False):
+                classify_article(article.id)
+            else:
+                classify_article.delay(article.id)
 
         if not created:
             fields_to_update = []

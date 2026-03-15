@@ -64,6 +64,29 @@ Celery worker / beat の違い
 	python manage.py runserver
 
 
+ngrok で外部公開（Windows / PowerShell）
+---------------------------------------
+1) Django サーバーを起動（別ターミナル）
+
+	.\venv\Scripts\python.exe manage.py runserver 0.0.0.0:8000
+
+2) ngrok を起動（別ターミナル）
+
+	ngrok http 8000
+
+	※ `ngrok` コマンドが通らない場合:
+	& "C:\Users\masa0\AppData\Local\Microsoft\WinGet\Packages\Ngrok.Ngrok_Microsoft.Winget.Source_8wekyb3d8bbwe\ngrok.exe" http 8000
+
+3) 確認
+
+	- Forwarding に表示される `https://...` URL を共有用に使う
+	- ngrok ローカル管理画面: http://127.0.0.1:4040
+
+4) 停止
+
+	- ngrok を実行しているターミナルで `Ctrl + C`
+
+
 環境変数
 --------
 `.env.example` にある主な設定:
@@ -127,31 +150,72 @@ PowerShell でターミナルを3つ開いて実行:
 - 管理画面: http://127.0.0.1:8000/admin/
 
 
-主要 API
---------
-認証:
-- POST `/api/auth/register/`
-- POST `/api/auth/token/`
-- POST `/api/auth/token/refresh/`
-- GET  `/api/auth/user/`
+主要 API（Next.js 連携用）
+--------------------------
+すべてのAPIは JWT 認証必須（Authorization: Bearer <token>）。
 
-記事関連:
-- `/api/articles/`（CRUD）
-- POST `/api/articles/{id}/mark_as_read/`
-- POST `/api/articles/{id}/reclassify/`
-- POST `/api/articles/{id}/rescrape/`
-- POST `/api/articles/reclassify_pending/`
-- GET  `/api/articles/reminders/`
-- GET  `/api/articles/random_pickup/`
+■ 認証
+  POST   /api/auth/register/          ユーザー登録
+  POST   /api/auth/token/             JWTトークン取得 { username, password }
+  POST   /api/auth/token/refresh/     トークン更新 { refresh }
+  GET    /api/auth/user/              ログイン中ユーザー情報
 
-その他:
-- `/api/tags/`
-- `/api/questions/`
-- `/api/actions/`
-- GET `/api/statistics/`
+■ 記事 (Article)
+  GET    /api/articles/               一覧（ページネーション 12件/ページ）
+    クエリパラメータ:
+      ?search=<kw>           全文検索（タイトル・URL・メモ等）
+      ?status=<状態>         unread / read_later / read / reread / hof / archived / trash
+      ?priority=<高低>       high / medium / low
+      ?is_favorite=true
+      ?is_from_rss=true
+      ?tag_id=<id>           タグIDで絞り込み
+      ?suggested_category=<カテゴリ名>
+      ?ordering=<field>      saved_at / priority / read_count / last_read_at（-付きで降順）
+  POST   /api/articles/               記事保存 { url_input, status?, priority?, tags? }
+  GET    /api/articles/{id}/          記事詳細
+  PUT    /api/articles/{id}/          記事更新
+  PATCH  /api/articles/{id}/          記事部分更新
+  DELETE /api/articles/{id}/          記事削除
+
+  POST   /api/articles/quick_save/            クイック保存 { url } ← Next.js拡張/共有機能向け
+  POST   /api/articles/{id}/mark_as_read/     既読マーク＋リマインド日更新
+  POST   /api/articles/{id}/reclassify/       AI分類再実行
+  POST   /api/articles/{id}/rescrape/         メタデータ再取得
+  POST   /api/articles/reclassify_pending/    未分類記事を一括再分類
+  GET    /api/articles/reminders/             リマインド対象記事一覧
+  GET    /api/articles/random_pickup/         ランダム1件
+
+■ タグ (Tag)
+  GET    /api/tags/                   タグ一覧
+  POST   /api/tags/                   タグ作成 { name }
+  GET    /api/tags/{id}/
+  PUT    /api/tags/{id}/
+  DELETE /api/tags/{id}/
+
+■ 問い (Question)
+  GET    /api/questions/              一覧 (?article=<id> で記事絞り込み可)
+  POST   /api/questions/              作成 { article, text }
+  PUT    /api/questions/{id}/
+  DELETE /api/questions/{id}/
+
+■ アクション (ActionItem)
+  GET    /api/actions/                一覧 (?article=<id> で記事絞り込み可)
+  POST   /api/actions/                作成 { article, text }
+  PATCH  /api/actions/{id}/           is_done の更新等
+  DELETE /api/actions/{id}/
+
+■ RSS購読
+  GET    /api/rss-subscriptions/      一覧
+  POST   /api/rss-subscriptions/      作成 { name, feed_url }
+  DELETE /api/rss-subscriptions/{id}/
+  POST   /api/rss-subscriptions/{id}/sync_now/     即時同期
+  POST   /api/rss-subscriptions/retry_metadata/    メタデータ再取得
+
+■ 統計
+  GET    /api/statistics/             記事数・タグ集計・月別データ
 
 
-HTML 画面
+HTML 画面（Next.js移行後は不要）
 ---------
 - `/` : 記事一覧（ログイン必須）
 - `/articles/{id}/edit/` : 記事編集
